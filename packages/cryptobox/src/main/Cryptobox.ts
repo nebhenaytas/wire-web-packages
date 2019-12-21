@@ -114,7 +114,7 @@ export class Cryptobox extends EventEmitter {
     return this.create_new_identity()
       .then(() => this.create_last_resort_prekey())
       .then((lastResortPreKey: ProteusKeys.PreKey) => {
-        this.logger.log(`Created Last Resort PreKey with ID "${lastResortPreKey.key_id}".`);
+        this.logger.log(`Created Last Resort PreKey with ID "${lastResortPreKey.keyId}".`);
         return this.init(false);
       });
   }
@@ -122,23 +122,23 @@ export class Cryptobox extends EventEmitter {
   public load(): Promise<ProteusKeys.PreKey[]> {
     this.logger.log('Initializing Cryptobox. Loading local identity...');
     return this.store
-      .load_identity()
+      .loadIdentity()
       .then((identity: ProteusKeys.IdentityKeyPair | undefined) => {
         if (identity) {
           this.identity = identity;
 
           this.logger.log('Initialized Cryptobox with existing local identity.');
-          this.logger.log(`Identity fingerprint is "${identity.public_key.fingerprint()}".`);
+          this.logger.log(`Identity fingerprint is "${identity.publicKey.fingerprint()}".`);
           this.logger.log('Loading PreKeys...');
 
-          return this.store.load_prekeys();
+          return this.store.loadPrekeys();
         }
         throw new CryptoboxError('Failed to load local identity');
       })
       .then((preKeysFromStorage: ProteusKeys.PreKey[]) => {
-        const lastResortPreKey = preKeysFromStorage.find(preKey => preKey.key_id === ProteusKeys.PreKey.MAX_PREKEY_ID);
+        const lastResortPreKey = preKeysFromStorage.find(preKey => preKey.keyId === ProteusKeys.PreKey.MAX_PREKEY_ID);
         if (lastResortPreKey) {
-          this.logger.log(`Loaded Last Resort PreKey with ID "${lastResortPreKey.key_id}".`);
+          this.logger.log(`Loaded Last Resort PreKey with ID "${lastResortPreKey.keyId}".`);
           this.lastResortPreKey = lastResortPreKey;
 
           this.logger.log(`Loaded "${this.minimumAmountOfPreKeys - 1}" standard PreKeys...`);
@@ -151,8 +151,8 @@ export class Cryptobox extends EventEmitter {
 
   private init(publishPrekeys?: boolean): Promise<ProteusKeys.PreKey[]> {
     return this.refill_prekeys(publishPrekeys)
-      .then(() => this.store.load_prekeys())
-      .then(prekeys => prekeys.sort((a, b) => a.key_id - b.key_id));
+      .then(() => this.store.loadPrekeys())
+      .then(prekeys => prekeys.sort((a, b) => a.keyId - b.keyId));
   }
 
   public get_serialized_last_resort_prekey(): Promise<{id: number; key: string}> {
@@ -163,7 +163,7 @@ export class Cryptobox extends EventEmitter {
   }
 
   public get_prekey(prekey_id: number = ProteusKeys.PreKey.MAX_PREKEY_ID): Promise<ProteusKeys.PreKey | undefined> {
-    return this.store.load_prekey(prekey_id);
+    return this.store.loadPrekey(prekey_id);
   }
 
   public async get_prekey_bundle(
@@ -178,14 +178,14 @@ export class Cryptobox extends EventEmitter {
       throw new CryptoboxError(`PreKey with ID "${preKeyId}" cannot be found.`);
     }
 
-    return ProteusKeys.PreKeyBundle.new(this.identity.public_key, preKey);
+    return ProteusKeys.PreKeyBundle.new(this.identity.publicKey, preKey);
   }
 
   public get_serialized_standard_prekeys(): Promise<{id: number; key: string}[]> {
-    return this.store.load_prekeys().then(prekeys =>
+    return this.store.loadPrekeys().then(prekeys =>
       prekeys
         .filter((preKey: ProteusKeys.PreKey) => {
-          const isLastResortPreKey = preKey.key_id === ProteusKeys.PreKey.MAX_PREKEY_ID;
+          const isLastResortPreKey = preKey.keyId === ProteusKeys.PreKey.MAX_PREKEY_ID;
           return !isLastResortPreKey;
         })
         .map((preKey: ProteusKeys.PreKey) => this.serialize_prekey(preKey)),
@@ -213,14 +213,14 @@ export class Cryptobox extends EventEmitter {
    */
   private refill_prekeys(publishPrekeys: boolean = true): Promise<ProteusKeys.PreKey[]> {
     return this.store
-      .load_prekeys()
+      .loadPrekeys()
       .then(prekeys => {
         const missingAmount: number = Math.max(0, this.minimumAmountOfPreKeys - prekeys.length);
 
         if (missingAmount > 0) {
           const startId: number = prekeys.reduce((currentHighestValue: number, currentPreKey: ProteusKeys.PreKey) => {
-            const isLastResortPreKey = currentPreKey.key_id === ProteusKeys.PreKey.MAX_PREKEY_ID;
-            return isLastResortPreKey ? currentHighestValue : Math.max(currentPreKey.key_id + 1, currentHighestValue);
+            const isLastResortPreKey = currentPreKey.keyId === ProteusKeys.PreKey.MAX_PREKEY_ID;
+            return isLastResortPreKey ? currentHighestValue : Math.max(currentPreKey.keyId + 1, currentHighestValue);
           }, 0);
 
           this.logger.warn(
@@ -234,7 +234,7 @@ export class Cryptobox extends EventEmitter {
       .then((newPreKeys: ProteusKeys.PreKey[]) => {
         if (newPreKeys.length > 0) {
           this.logger.log(
-            `Generated PreKeys from ID "${newPreKeys[0].key_id}" to ID "${newPreKeys[newPreKeys.length - 1].key_id}".`,
+            `Generated PreKeys from ID "${newPreKeys[0].keyId}" to ID "${newPreKeys[newPreKeys.length - 1].keyId}".`,
           );
 
           if (publishPrekeys) {
@@ -247,13 +247,13 @@ export class Cryptobox extends EventEmitter {
 
   private create_new_identity(): Promise<ProteusKeys.IdentityKeyPair> {
     return Promise.resolve()
-      .then(() => this.store.delete_all())
+      .then(() => this.store.deleteAll())
       .then(() => {
         return ProteusKeys.IdentityKeyPair.new();
       })
       .then((identity: ProteusKeys.IdentityKeyPair) => {
         this.logger.warn('Cleaned cryptographic items prior to saving a new local identity.');
-        this.logger.log(`Created new local identity. Fingerprint is "${identity.public_key.fingerprint()}".`);
+        this.logger.log(`Created new local identity. Fingerprint is "${identity.publicKey.fingerprint()}".`);
         return this.save_identity(identity);
       });
   }
@@ -287,12 +287,10 @@ export class Cryptobox extends EventEmitter {
       }
 
       if (this.identity) {
-        return ProteusSession.Session.init_from_prekey(this.identity, bundle).then(
-          (session: ProteusSession.Session) => {
-            const cryptobox_session = new CryptoboxSession(session_id, session);
-            return this.session_save(cryptobox_session);
-          },
-        );
+        return ProteusSession.Session.initFromPrekey(this.identity, bundle).then((session: ProteusSession.Session) => {
+          const cryptobox_session = new CryptoboxSession(session_id, session);
+          return this.session_save(cryptobox_session);
+        });
       }
 
       return Promise.reject(new CryptoboxError('No local identity available.'));
@@ -307,7 +305,7 @@ export class Cryptobox extends EventEmitter {
     const env: ProteusMessage.Envelope = ProteusMessage.Envelope.deserialise(envelope);
 
     if (this.identity) {
-      return ProteusSession.Session.init_from_message(this.identity, this.store, env).then(tuple => {
+      return ProteusSession.Session.initFromMessage(this.identity, this.store, env).then(tuple => {
         const [session, decrypted] = tuple;
         const cryptoBoxSession = new CryptoboxSession(session_id, session);
         return <[CryptoboxSession, Uint8Array]>[cryptoBoxSession, decrypted];
@@ -351,7 +349,7 @@ export class Cryptobox extends EventEmitter {
     return Promise.resolve()
       .then(async () => {
         this.logger.log(`Creating Last Resort PreKey with ID "${ProteusKeys.PreKey.MAX_PREKEY_ID}"...`);
-        this.lastResortPreKey = await ProteusKeys.PreKey.last_resort();
+        this.lastResortPreKey = await ProteusKeys.PreKey.lastResort();
         return this.store.save_prekeys([this.lastResortPreKey]);
       })
       .then((preKeys: ProteusKeys.PreKey[]) => preKeys[0]);
@@ -359,7 +357,7 @@ export class Cryptobox extends EventEmitter {
 
   public serialize_prekey(prekey: ProteusKeys.PreKey): {id: number; key: string} {
     if (this.identity) {
-      return ProteusKeys.PreKeyBundle.new(this.identity.public_key, prekey).serialised_json();
+      return ProteusKeys.PreKeyBundle.new(this.identity.publicKey, prekey).serialisedJson();
     }
     throw new CryptoboxError('No local identity available.');
   }
@@ -373,7 +371,7 @@ export class Cryptobox extends EventEmitter {
     }
 
     return Promise.resolve()
-      .then(() => ProteusKeys.PreKey.generate_prekeys(start, size))
+      .then(() => ProteusKeys.PreKey.generatePrekeys(start, size))
       .then((newPreKeys: ProteusKeys.PreKey[]) => this.store.save_prekeys(newPreKeys));
   }
 
@@ -438,7 +436,7 @@ export class Cryptobox extends EventEmitter {
     this.identity = undefined;
     this.lastResortPreKey = undefined;
     this.queues = new LRUCache<PriorityQueue>(DEFAULT_CAPACITY);
-    await this.store.delete_all();
+    await this.store.deleteAll();
   }
 
   private async importIdentity(payload: string): Promise<void> {
@@ -456,7 +454,7 @@ export class Cryptobox extends EventEmitter {
     const proteusPreKeys = Object.values(serializedPreKeys).map(preKey => {
       const preKeyBuffer = Decoder.fromBase64(preKey).asBytes.buffer;
       const proteusPreKey = ProteusKeys.PreKey.deserialise(preKeyBuffer);
-      if (proteusPreKey.key_id === ProteusKeys.PreKey.MAX_PREKEY_ID) {
+      if (proteusPreKey.keyId === ProteusKeys.PreKey.MAX_PREKEY_ID) {
         this.lastResortPreKey = proteusPreKey;
       }
       return proteusPreKey;
@@ -494,7 +492,7 @@ export class Cryptobox extends EventEmitter {
       sessions: {},
     };
 
-    const identity = await this.store.load_identity();
+    const identity = await this.store.loadIdentity();
 
     if (identity) {
       data.identity = toBase64(identity.serialise());
@@ -505,9 +503,9 @@ export class Cryptobox extends EventEmitter {
       }
     }
 
-    const storedPreKeys = await this.store.load_prekeys();
+    const storedPreKeys = await this.store.loadPrekeys();
     for (const storedPreKey of storedPreKeys) {
-      data.prekeys[storedPreKey.key_id] = toBase64(storedPreKey.serialise());
+      data.prekeys[storedPreKey.keyId] = toBase64(storedPreKey.serialise());
     }
 
     return data;

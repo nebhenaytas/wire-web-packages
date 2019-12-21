@@ -43,7 +43,7 @@ describe('cryptobox.CryptoboxSession', () => {
 
     // 1. Bob creates and "uploads" a PreKey, which can be "consumed" by Alice
     const preKey = await bob.get_prekey(bobPreKeyId);
-    const bobBundle = Proteus.keys.PreKeyBundle.new(bob.identity.public_key, preKey);
+    const bobBundle = Proteus.keys.PreKeyBundle.new(bob.identity.publicKey, preKey);
     // 2. Alice takes Bob's PreKey bundle to initiate a session
     const sessionWithBob = await alice.session_from_prekey('alice-to-bob', bobBundle.serialise());
     return sessionWithBob;
@@ -52,8 +52,8 @@ describe('cryptobox.CryptoboxSession', () => {
   describe('"fingerprints"', () => {
     it('returns the local & remote fingerpint', async () => {
       const sessionWithBob = await setupAliceToBob(1, Proteus.keys.PreKey.MAX_PREKEY_ID);
-      expect(sessionWithBob.fingerprint_local()).toBe(alice.identity.public_key.fingerprint());
-      expect(sessionWithBob.fingerprint_remote()).toBe(bob.identity.public_key.fingerprint());
+      expect(sessionWithBob.fingerprint_local()).toBe(alice.identity.publicKey.fingerprint());
+      expect(sessionWithBob.fingerprint_remote()).toBe(bob.identity.publicKey.fingerprint());
     });
   });
 
@@ -63,7 +63,7 @@ describe('cryptobox.CryptoboxSession', () => {
     it('encrypts a message from Alice which can be decrypted by Bob', async () => {
       const sessionWithBob = await setupAliceToBob(2, 0);
       const serialisedCipherText = await sessionWithBob.encrypt(plaintext);
-      const proteusSession = await bob.session_from_message('session-with-alice', serialisedCipherText);
+      const proteusSession = await bob.sessionFromMessage('session-with-alice', serialisedCipherText);
       const decryptedBuffer = proteusSession[1];
       const decrypted = sodium.to_string(decryptedBuffer);
       expect(decrypted).toBe(plaintext);
@@ -72,7 +72,7 @@ describe('cryptobox.CryptoboxSession', () => {
     it("doesn't remove the last resort PreKey if consumed", async () => {
       const sessionWithBob = await setupAliceToBob(1, Proteus.keys.PreKey.MAX_PREKEY_ID);
       const serialisedCipherText = await sessionWithBob.encrypt(plaintext);
-      const proteusSession = await bob.session_from_message('session-with-alice', serialisedCipherText);
+      const proteusSession = await bob.sessionFromMessage('session-with-alice', serialisedCipherText);
       const decryptedBuffer = proteusSession[1];
       const decrypted = sodium.to_string(decryptedBuffer);
       expect(decrypted).toBe(plaintext);

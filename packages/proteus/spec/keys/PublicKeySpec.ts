@@ -23,17 +23,17 @@ describe('Public Key', () => {
   it('rejects shared secrets at the point of infinity', async () => {
     try {
       const emptyCurve = new Uint8Array([1].concat(Array.from({length: 30})));
-      const alice_keypair = await Proteus.keys.KeyPair.new();
-      const bob_keypair = await Proteus.keys.KeyPair.new();
+      const aliceKeypair = await Proteus.keys.KeyPair.new();
+      const bobKeypair = await Proteus.keys.KeyPair.new();
 
-      const alice_sk = alice_keypair.secret_key.shared_secret(bob_keypair.public_key);
-      const bob_sk = bob_keypair.secret_key.shared_secret(alice_keypair.public_key);
+      const aliceSecretKey = aliceKeypair.secretKey.sharedSecret(bobKeypair.publicKey);
+      const bobSecretKey = bobKeypair.secretKey.sharedSecret(aliceKeypair.publicKey);
 
-      expect(alice_sk).toEqual(bob_sk);
+      expect(aliceSecretKey).toEqual(bobSecretKey);
 
-      bob_keypair.public_key.pub_curve = emptyCurve;
+      bobKeypair.publicKey.pubCurve = emptyCurve;
 
-      alice_keypair.secret_key.shared_secret(bob_keypair.public_key);
+      aliceKeypair.secretKey.sharedSecret(bobKeypair.publicKey);
 
       fail();
     } catch (error) {

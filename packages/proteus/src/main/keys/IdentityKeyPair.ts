@@ -25,25 +25,25 @@ import {KeyPair} from './KeyPair';
 import {SecretKey} from './SecretKey';
 
 export class IdentityKeyPair {
-  public_key: IdentityKey;
-  secret_key: SecretKey;
+  publicKey: IdentityKey;
+  secretKey: SecretKey;
   version: number;
 
   constructor() {
-    this.public_key = new IdentityKey();
-    this.secret_key = new SecretKey();
+    this.publicKey = new IdentityKey();
+    this.secretKey = new SecretKey();
     this.version = -1;
   }
 
   static async new(): Promise<IdentityKeyPair> {
-    const key_pair = await KeyPair.new();
+    const keyPair = await KeyPair.new();
 
-    const ikp = ClassUtil.new_instance(IdentityKeyPair);
-    ikp.version = 1;
-    ikp.secret_key = key_pair.secret_key;
-    ikp.public_key = IdentityKey.new(key_pair.public_key);
+    const identityKeyPairInstance = ClassUtil.newInstance(IdentityKeyPair);
+    identityKeyPairInstance.version = 1;
+    identityKeyPairInstance.secretKey = keyPair.secretKey;
+    identityKeyPairInstance.publicKey = IdentityKey.new(keyPair.publicKey);
 
-    return ikp;
+    return identityKeyPairInstance;
   }
 
   serialise(): ArrayBuffer {
@@ -52,8 +52,8 @@ export class IdentityKeyPair {
     return encoder.get_buffer();
   }
 
-  static deserialise(buf: ArrayBuffer): IdentityKeyPair {
-    const decoder = new CBOR.Decoder(buf);
+  static deserialise(buffer: ArrayBuffer): IdentityKeyPair {
+    const decoder = new CBOR.Decoder(buffer);
     return IdentityKeyPair.decode(decoder);
   }
 
@@ -62,13 +62,13 @@ export class IdentityKeyPair {
     encoder.u8(0);
     encoder.u8(this.version);
     encoder.u8(1);
-    this.secret_key.encode(encoder);
+    this.secretKey.encode(encoder);
     encoder.u8(2);
-    return this.public_key.encode(encoder);
+    return this.publicKey.encode(encoder);
   }
 
   static decode(decoder: CBOR.Decoder): IdentityKeyPair {
-    const self = ClassUtil.new_instance(IdentityKeyPair);
+    const self = ClassUtil.newInstance(IdentityKeyPair);
 
     const nprops = decoder.object();
     for (let index = 0; index <= nprops - 1; index++) {
@@ -77,10 +77,10 @@ export class IdentityKeyPair {
           self.version = decoder.u8();
           break;
         case 1:
-          self.secret_key = SecretKey.decode(decoder);
+          self.secretKey = SecretKey.decode(decoder);
           break;
         case 2:
-          self.public_key = IdentityKey.decode(decoder);
+          self.publicKey = IdentityKey.decode(decoder);
           break;
         default:
           decoder.skip();

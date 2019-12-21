@@ -29,52 +29,52 @@ import {InputError} from '../errors/InputError';
 
 /** Construct an ephemeral key pair. */
 export class KeyPair {
-  public_key: PublicKey;
-  secret_key: SecretKey;
+  publicKey: PublicKey;
+  secretKey: SecretKey;
 
   constructor() {
-    this.public_key = new PublicKey();
-    this.secret_key = new SecretKey();
+    this.publicKey = new PublicKey();
+    this.secretKey = new SecretKey();
   }
 
   static async new(): Promise<KeyPair> {
     await _sodium.ready;
     const sodium = _sodium;
 
-    const ed25519_key_pair = sodium.crypto_sign_keypair();
+    const ed25519KeyPair = sodium.crypto_sign_keypair();
 
-    const kp = ClassUtil.new_instance(KeyPair);
-    kp.secret_key = KeyPair.prototype._construct_private_key(ed25519_key_pair);
-    kp.public_key = KeyPair.prototype._construct_public_key(ed25519_key_pair);
+    const keyPairInstance = ClassUtil.newInstance(KeyPair);
+    keyPairInstance.secretKey = KeyPair.prototype.constructPrivateKey(ed25519KeyPair);
+    keyPairInstance.publicKey = KeyPair.prototype.constructPublicKey(ed25519KeyPair);
 
-    return kp;
+    return keyPairInstance;
   }
 
   /**
    * Ed25519 keys can be converted to Curve25519 keys, so that the same key pair can be
    * used both for authenticated encryption (`crypto_box`) and for signatures (`crypto_sign`).
-   * @param ed25519_key_pair Key pair based on Edwards-curve (Ed25519)
+   * @param ed25519KeyPair Key pair based on Edwards-curve (Ed25519)
    * @returns Constructed private key
    * @see https://download.libsodium.org/doc/advanced/ed25519-curve25519.html
    */
-  private _construct_private_key(ed25519_key_pair: _sodium.KeyPair): SecretKey {
-    const sk_ed25519 = ed25519_key_pair.privateKey;
-    const sk_curve25519 = ed2curve.convertSecretKey(sk_ed25519);
-    if (sk_curve25519) {
-      return SecretKey.new(sk_ed25519, sk_curve25519);
+  private constructPrivateKey(ed25519KeyPair: _sodium.KeyPair): SecretKey {
+    const secretKeyEd25519 = ed25519KeyPair.privateKey;
+    const secretKeyCurve25519 = ed2curve.convertSecretKey(secretKeyEd25519);
+    if (secretKeyCurve25519) {
+      return SecretKey.new(secretKeyEd25519, secretKeyCurve25519);
     }
     throw new InputError.ConversionError('Could not convert private key with ed2curve.', 409);
   }
 
   /**
-   * @param ed25519_key_pair Key pair based on Edwards-curve (Ed25519)
+   * @param ed25519KeyPair Key pair based on Edwards-curve (Ed25519)
    * @returns Constructed public key
    */
-  private _construct_public_key(ed25519_key_pair: _sodium.KeyPair): PublicKey {
-    const pk_ed25519 = ed25519_key_pair.publicKey;
-    const pk_curve25519 = ed2curve.convertPublicKey(pk_ed25519);
-    if (pk_curve25519) {
-      return PublicKey.new(pk_ed25519, pk_curve25519);
+  private constructPublicKey(ed25519KeyPair: _sodium.KeyPair): PublicKey {
+    const publicKeyEd25519 = ed25519KeyPair.publicKey;
+    const publicKeyCurve25519 = ed2curve.convertPublicKey(publicKeyEd25519);
+    if (publicKeyCurve25519) {
+      return PublicKey.new(publicKeyEd25519, publicKeyCurve25519);
     }
     throw new InputError.ConversionError('Could not convert public key with ed2curve.', 408);
   }
@@ -83,23 +83,23 @@ export class KeyPair {
     encoder.object(2);
 
     encoder.u8(0);
-    this.secret_key.encode(encoder);
+    this.secretKey.encode(encoder);
 
     encoder.u8(1);
-    return this.public_key.encode(encoder);
+    return this.publicKey.encode(encoder);
   }
 
   static decode(decoder: CBOR.Decoder): KeyPair {
-    const self = ClassUtil.new_instance(KeyPair);
+    const self = ClassUtil.newInstance(KeyPair);
 
     const nprops = decoder.object();
     for (let index = 0; index <= nprops - 1; index++) {
       switch (decoder.u8()) {
         case 0:
-          self.secret_key = SecretKey.decode(decoder);
+          self.secretKey = SecretKey.decode(decoder);
           break;
         case 1:
-          self.public_key = PublicKey.decode(decoder);
+          self.publicKey = PublicKey.decode(decoder);
           break;
         default:
           decoder.skip();

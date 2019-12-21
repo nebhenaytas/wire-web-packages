@@ -42,14 +42,14 @@ describe('CryptographyService', () => {
   beforeEach(async () => {
     cryptographyService = new CryptographyService(new APIClient(), await createEngine('wire'));
     const preKeys = await cryptographyService.cryptobox.create();
-    aliceLastResortPreKey = preKeys.filter(preKey => preKey.key_id === Proteus.keys.PreKey.MAX_PREKEY_ID)[0];
+    aliceLastResortPreKey = preKeys.filter(preKey => preKey.keyId === Proteus.keys.PreKey.MAX_PREKEY_ID)[0];
     bob = new Cryptobox(await createEngine('wire'));
     await bob.create();
   });
 
   describe('"constructor"', () => {
     it('creates an instance.', () => {
-      expect(cryptographyService.cryptobox.identity!.public_key.fingerprint()).toBeDefined();
+      expect(cryptographyService.cryptobox.identity!.publicKey.fingerprint()).toBeDefined();
       expect(cryptographyService).toBeDefined();
     });
   });
@@ -66,7 +66,7 @@ describe('CryptographyService', () => {
 
   describe('"decrypt"', () => {
     it('decrypts a Base64-encoded cipher message.', async () => {
-      const alicePublicKey = cryptographyService.cryptobox.identity!.public_key;
+      const alicePublicKey = cryptographyService.cryptobox.identity!.publicKey;
       const publicPreKeyBundle = Proteus.keys.PreKeyBundle.new(alicePublicKey, aliceLastResortPreKey);
       const text = 'Hello Alice!';
       const encryptedPreKeyMessage = await bob.encrypt(

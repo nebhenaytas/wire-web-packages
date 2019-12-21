@@ -19,23 +19,23 @@
 
 import {ProteusError} from '../errors/ProteusError';
 
-export function assert_is_not_zeros(array: number[] | Uint8Array): void {
-  let only_zeros = true;
+export function assertIsNotZeros(array: number[] | Uint8Array): void {
+  let onlyZeros = true;
 
   for (const value of array) {
     if (value > 0) {
-      only_zeros = false;
+      onlyZeros = false;
       break;
     }
   }
 
-  if (only_zeros === true) {
+  if (onlyZeros === true) {
     throw new ProteusError('Array consists only of zeros', ProteusError.CODE.CASE_100);
   }
 }
 
 /** Concatenates array buffers (usually 8-bit unsigned). */
-export function concatenate_array_buffers(buffers: Uint8Array[]): Uint8Array {
+export function concatenateArrayBuffers(buffers: Uint8Array[]): Uint8Array {
   return buffers.reduce(
     (accumulator: Uint8Array, bytes: Uint8Array): Uint8Array => {
       const buffer = new Uint8Array(accumulator.byteLength + bytes.byteLength);

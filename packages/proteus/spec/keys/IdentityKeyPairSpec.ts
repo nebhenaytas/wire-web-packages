@@ -27,10 +27,10 @@ beforeAll(async () => {
 describe('IdentityKeyPair', () => {
   it('serialises and deserialises', async () => {
     const ikp = await Proteus.keys.IdentityKeyPair.new();
-    const ikp_bytes = ikp.serialise();
-    const ikp_deser = Proteus.keys.IdentityKeyPair.deserialise(ikp_bytes);
+    const ikpBytes = ikp.serialise();
+    const ikpDeserialised = Proteus.keys.IdentityKeyPair.deserialise(ikpBytes);
 
-    expect(ikp.public_key.fingerprint()).toBe(ikp_deser.public_key.fingerprint());
-    expect(sodium.to_hex(new Uint8Array(ikp_bytes))).toBe(sodium.to_hex(new Uint8Array(ikp_deser.serialise())));
+    expect(ikp.publicKey.fingerprint()).toBe(ikpDeserialised.publicKey.fingerprint());
+    expect(sodium.to_hex(new Uint8Array(ikpBytes))).toBe(sodium.to_hex(new Uint8Array(ikpDeserialised.serialise())));
   });
 });

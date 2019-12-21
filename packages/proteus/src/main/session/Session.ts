@@ -50,50 +50,50 @@ export interface IntermediateSessionState {
 }
 
 export class Session {
-  static MAX_RECV_CHAINS = 5;
-  static MAX_SESSION_STATES = 100;
+  static readonly MAX_RECV_CHAINS = 5;
+  static readonly MAX_SESSION_STATES = 100;
 
   counter = 0;
-  local_identity: IdentityKeyPair;
-  pending_prekey: (number | PublicKey)[] | null;
-  remote_identity: IdentityKey;
-  session_states: IntermediateSessionState;
-  session_tag: SessionTag;
+  localIdentity: IdentityKeyPair;
+  pendingPrekey: (number | PublicKey)[] | null;
+  remoteIdentity: IdentityKey;
+  sessionStates: IntermediateSessionState;
+  sessionTag: SessionTag;
   version = 1;
 
   constructor() {
-    this.local_identity = new IdentityKeyPair();
-    this.pending_prekey = null;
-    this.remote_identity = new IdentityKey();
-    this.session_states = {};
-    this.session_tag = new SessionTag();
+    this.localIdentity = new IdentityKeyPair();
+    this.pendingPrekey = null;
+    this.remoteIdentity = new IdentityKey();
+    this.sessionStates = {};
+    this.sessionTag = new SessionTag();
   }
 
   /**
-   * @param local_identity Alice's Identity Key Pair
-   * @param remote_pkbundle Bob's Pre-Key Bundle
+   * @param localIdentity Alice's Identity Key Pair
+   * @param remotePreyKeyBundle Bob's Pre-Key Bundle
    */
-  static async init_from_prekey(local_identity: IdentityKeyPair, remote_pkbundle: PreKeyBundle): Promise<Session> {
-    const alice_base = await KeyPair.new();
+  static async initFromPrekey(localIdentity: IdentityKeyPair, remotePreyKeyBundle: PreKeyBundle): Promise<Session> {
+    const aliceBase = await KeyPair.new();
 
-    const state = await SessionState.init_as_alice(local_identity, alice_base, remote_pkbundle);
+    const state = await SessionState.initAsAlice(localIdentity, aliceBase, remotePreyKeyBundle);
 
-    const session_tag = SessionTag.new();
+    const sessionTag = SessionTag.new();
 
-    const session = ClassUtil.new_instance(this);
-    session.session_tag = session_tag;
-    session.local_identity = local_identity;
-    session.remote_identity = remote_pkbundle.identity_key;
-    session.pending_prekey = [remote_pkbundle.prekey_id, alice_base.public_key];
-    session.session_states = {};
+    const sessionInstance = ClassUtil.newInstance(Session);
+    sessionInstance.sessionTag = sessionTag;
+    sessionInstance.localIdentity = localIdentity;
+    sessionInstance.remoteIdentity = remotePreyKeyBundle.identityKey;
+    sessionInstance.pendingPrekey = [remotePreyKeyBundle.prekeyId, aliceBase.publicKey];
+    sessionInstance.sessionStates = {};
 
-    session._insert_session_state(session_tag, state);
-    return session;
+    sessionInstance.insertSessionState(sessionTag, state);
+    return sessionInstance;
   }
 
-  static async init_from_message(
-    our_identity: IdentityKeyPair,
-    prekey_store: PreKeyStore,
+  static async initFromMessage(
+    ourIdentity: IdentityKeyPair,
+    prekeyStore: PreKeyStore,
     envelope: Envelope,
   ): Promise<[Session, Uint8Array]> {
     const preKeyMessage = envelope.message;
@@ -106,21 +106,21 @@ export class Session {
     }
 
     if (preKeyMessage instanceof PreKeyMessage) {
-      const session = ClassUtil.new_instance(Session);
-      session.session_tag = preKeyMessage.message.session_tag;
-      session.local_identity = our_identity;
-      session.remote_identity = preKeyMessage.identity_key;
-      session.pending_prekey = null;
-      session.session_states = {};
+      const sessionInstance = ClassUtil.newInstance(Session);
+      sessionInstance.sessionTag = preKeyMessage.message.sessionTag;
+      sessionInstance.localIdentity = ourIdentity;
+      sessionInstance.remoteIdentity = preKeyMessage.identityKey;
+      sessionInstance.pendingPrekey = null;
+      sessionInstance.sessionStates = {};
 
-      const state = await session._new_state(prekey_store, preKeyMessage);
+      const state = await sessionInstance.newState(prekeyStore, preKeyMessage);
       const plain = await state.decrypt(envelope, preKeyMessage.message);
-      session._insert_session_state(preKeyMessage.message.session_tag, state);
+      sessionInstance.insertSessionState(preKeyMessage.message.sessionTag, state);
 
-      if (preKeyMessage.prekey_id < PreKey.MAX_PREKEY_ID) {
-        MemoryUtil.zeroize(await prekey_store.load_prekey(preKeyMessage.prekey_id));
+      if (preKeyMessage.prekeyId < PreKey.MAX_PREKEY_ID) {
+        MemoryUtil.zeroize(await prekeyStore.loadPrekey(preKeyMessage.prekeyId));
         try {
-          await prekey_store.delete_prekey(preKeyMessage.prekey_id);
+          await prekeyStore.deletePrekey(preKeyMessage.prekeyId);
         } catch (error) {
           throw new DecryptError.PrekeyNotFound(
             `Could not delete PreKey: ${error.message}`,
@@ -129,7 +129,7 @@ export class Session {
         }
       }
 
-      return [session, plain];
+      return [sessionInstance, plain];
     }
 
     throw new DecryptError.InvalidMessage(
@@ -138,32 +138,32 @@ export class Session {
     );
   }
 
-  private async _new_state(pre_key_store: PreKeyStore, pre_key_message: PreKeyMessage): Promise<SessionState> {
-    const pre_key = await pre_key_store.load_prekey(pre_key_message.prekey_id);
-    if (pre_key) {
-      return SessionState.init_as_bob(
-        this.local_identity,
-        pre_key.key_pair,
-        pre_key_message.identity_key,
-        pre_key_message.base_key,
+  private async newState(preKeyStore: PreKeyStore, preKeyMessage: PreKeyMessage): Promise<SessionState> {
+    const preKey = await preKeyStore.loadPrekey(preKeyMessage.prekeyId);
+    if (preKey) {
+      return SessionState.initAsBob(
+        this.localIdentity,
+        preKey.keyPair,
+        preKeyMessage.identityKey,
+        preKeyMessage.baseKey,
       );
     }
     throw new ProteusError(
-      `Unable to find PreKey ID "${pre_key_message.prekey_id}" in PreKey store "${pre_key_store.constructor.name}".`,
+      `Unable to find PreKey ID "${preKeyMessage.prekeyId}" in PreKey store "${preKeyStore.constructor.name}".`,
       ProteusError.CODE.CASE_101,
     );
   }
 
-  private _insert_session_state(tag: SessionTag, state: SessionState): void {
-    if (this.session_states.hasOwnProperty(tag.toString())) {
-      this.session_states[tag.toString()].state = state;
+  private insertSessionState(tag: SessionTag, state: SessionState): void {
+    if (this.sessionStates.hasOwnProperty(tag.toString())) {
+      this.sessionStates[tag.toString()].state = state;
     } else {
       if (this.counter >= Number.MAX_SAFE_INTEGER) {
-        this.session_states = {};
+        this.sessionStates = {};
         this.counter = 0;
       }
 
-      this.session_states[tag.toString()] = {
+      this.sessionStates[tag.toString()] = {
         idx: this.counter,
         state: state,
         tag,
@@ -171,100 +171,95 @@ export class Session {
       this.counter++;
     }
 
-    if (this.session_tag.toString() !== tag.toString()) {
-      this.session_tag = tag;
+    if (this.sessionTag.toString() !== tag.toString()) {
+      this.sessionTag = tag;
     }
 
-    const obj_size = (obj: IntermediateSessionState) => Object.keys(obj).length;
+    const numStates = (state: IntermediateSessionState) => Object.keys(state).length;
 
-    if (obj_size(this.session_states) < Session.MAX_SESSION_STATES) {
+    if (numStates(this.sessionStates) < Session.MAX_SESSION_STATES) {
       return;
     }
 
     // if we get here, it means that we have more than MAX_SESSION_STATES and
     // we need to evict the oldest one.
-    return this._evict_oldest_session_state();
+    return this.evictOldestSessionState();
   }
 
-  private _evict_oldest_session_state(): void {
-    const oldest = Object.keys(this.session_states)
-      .filter(obj => obj.toString() !== this.session_tag.toString())
+  private evictOldestSessionState(): void {
+    const oldest = Object.keys(this.sessionStates)
+      .filter(obj => obj.toString() !== this.sessionTag.toString())
       .reduce((lowest, obj, index) => {
-        return this.session_states[obj].idx < this.session_states[lowest].idx ? obj.toString() : lowest;
+        return this.sessionStates[obj].idx < this.sessionStates[lowest].idx ? obj.toString() : lowest;
       });
 
-    MemoryUtil.zeroize(this.session_states[oldest]);
-    delete this.session_states[oldest];
+    MemoryUtil.zeroize(this.sessionStates[oldest]);
+    delete this.sessionStates[oldest];
   }
 
-  get_local_identity(): IdentityKey {
-    return this.local_identity.public_key;
+  getLocalIdentity(): IdentityKey {
+    return this.localIdentity.publicKey;
   }
 
   /**
    * @param plaintext The plaintext which needs to be encrypted
    */
   async encrypt(plaintext: string | Uint8Array): Promise<Envelope> {
-    const session_state = this.session_states[this.session_tag.toString()];
+    const sessionState = this.sessionStates[this.sessionTag.toString()];
 
-    if (!session_state) {
+    if (!sessionState) {
       throw new ProteusError(
-        `Could not find session for tag '${(this.session_tag || '').toString()}'.`,
+        `Could not find session for tag '${(this.sessionTag || '').toString()}'.`,
         ProteusError.CODE.CASE_102,
       );
     }
 
-    return session_state.state.encrypt(
-      this.local_identity.public_key,
-      this.pending_prekey,
-      this.session_tag,
-      plaintext,
-    );
+    return sessionState.state.encrypt(this.localIdentity.publicKey, this.pendingPrekey, this.sessionTag, plaintext);
   }
 
-  async decrypt(prekey_store: PreKeyStore, envelope: Envelope): Promise<Uint8Array> {
+  async decrypt(prekeyStore: PreKeyStore, envelope: Envelope): Promise<Uint8Array> {
     const preKeyMessage = envelope.message;
 
     if (preKeyMessage instanceof CipherMessage) {
-      return this._decrypt_cipher_message(envelope, preKeyMessage);
+      return this.decryptCipherMessage(envelope, preKeyMessage);
     }
 
     if (preKeyMessage instanceof PreKeyMessage) {
-      const actual_fingerprint = preKeyMessage.identity_key.fingerprint();
-      const expected_fingerprint = this.remote_identity.fingerprint();
+      const actualFingerprint = preKeyMessage.identityKey.fingerprint();
+      const expectedFingerprint = this.remoteIdentity.fingerprint();
 
-      if (actual_fingerprint !== expected_fingerprint) {
-        const message = `Fingerprints do not match: We expected '${expected_fingerprint}', but received '${actual_fingerprint}'.`;
+      if (actualFingerprint !== expectedFingerprint) {
+        const message = `Fingerprints do not match: We expected '${expectedFingerprint}', but received '${actualFingerprint}'.`;
         throw new DecryptError.RemoteIdentityChanged(message, DecryptError.CODE.CASE_204);
       }
 
-      return this._decrypt_prekey_message(envelope, preKeyMessage, prekey_store);
+      return this.decryptPrekeyMessage(envelope, preKeyMessage, prekeyStore);
     }
 
     throw new DecryptError('Unknown message type.', DecryptError.CODE.CASE_200);
   }
 
-  private async _decrypt_prekey_message(
+  private async decryptPrekeyMessage(
     envelope: Envelope,
     msg: PreKeyMessage,
-    prekey_store: PreKeyStore,
+    prekeyStore: PreKeyStore,
   ): Promise<Uint8Array> {
     try {
-      const plaintext = await this._decrypt_cipher_message(envelope, msg.message);
+      const plaintext = await this.decryptCipherMessage(envelope, msg.message);
       return plaintext;
     } catch (error) {
       if (error instanceof DecryptError.InvalidSignature || error instanceof DecryptError.InvalidMessage) {
-        const state = await this._new_state(prekey_store, msg);
+        const state = await this.newState(prekeyStore, msg);
         const plaintext = await state.decrypt(envelope, msg.message);
 
-        if (msg.prekey_id !== PreKey.MAX_PREKEY_ID) {
+        if (msg.prekeyId !== PreKey.MAX_PREKEY_ID) {
           // TODO: Zeroize should be tested (and awaited) here!
-          MemoryUtil.zeroize(await prekey_store.load_prekey(msg.prekey_id));
-          await prekey_store.delete_prekey(msg.prekey_id);
+          MemoryUtil.zeroize(await prekeyStore.loadPrekey(msg.prekeyId));
+          await prekeyStore.deletePrekey(msg.prekeyId);
         }
 
-        this._insert_session_state(msg.message.session_tag, state);
-        this.pending_prekey = null;
+        this.insertSessionState(msg.message.sessionTag, state);
+        this.pendingPrekey = null;
 
         return plaintext;
       }
@@ -272,11 +267,11 @@ export class Session {
     }
   }
 
-  private async _decrypt_cipher_message(envelope: Envelope, msg: CipherMessage): Promise<Uint8Array> {
-    const state = this.session_states[msg.session_tag.toString()];
-    if (!state) {
+  private async decryptCipherMessage(envelope: Envelope, msg: CipherMessage): Promise<Uint8Array> {
+    const serialisedState = this.sessionStates[msg.sessionTag.toString()];
+    if (!serialisedState) {
       throw new DecryptError.InvalidMessage(
-        `Local session not found for message session tag '${msg.session_tag}'.`,
+        `Local session not found for message session tag '${msg.sessionTag}'.`,
         DecryptError.CODE.CASE_205,
       );
     }
@@ -284,13 +279,13 @@ export class Session {
     // serialise and de-serialise for a deep clone
     // THIS IS IMPORTANT, DO NOT MUTATE THE SESSION STATE IN-PLACE
     // mutating in-place can lead to undefined behavior and undefined state in edge cases
-    const session_state = SessionState.deserialise(state.state.serialise());
+    const sessionState = SessionState.deserialise(serialisedState.state.serialise());
 
-    const plaintext = await session_state.decrypt(envelope, msg);
+    const plaintext = await sessionState.decrypt(envelope, msg);
 
-    this.pending_prekey = null;
+    this.pendingPrekey = null;
 
-    this._insert_session_state(msg.session_tag, session_state);
+    this.insertSessionState(msg.sessionTag, sessionState);
     return plaintext;
   }
 
@@ -300,9 +295,9 @@ export class Session {
     return encoder.get_buffer();
   }
 
-  static deserialise(local_identity: IdentityKeyPair, buf: ArrayBuffer): Session {
-    const decoder = new CBOR.Decoder(buf);
-    return this.decode(local_identity, decoder);
+  static deserialise(localIdentity: IdentityKeyPair, buffer: ArrayBuffer): Session {
+    const decoder = new CBOR.Decoder(buffer);
+    return this.decode(localIdentity, decoder);
   }
 
   encode(encoder: CBOR.Encoder): void {
@@ -310,35 +305,35 @@ export class Session {
     encoder.u8(0);
     encoder.u8(this.version);
     encoder.u8(1);
-    this.session_tag.encode(encoder);
+    this.sessionTag.encode(encoder);
     encoder.u8(2);
-    this.local_identity.public_key.encode(encoder);
+    this.localIdentity.publicKey.encode(encoder);
     encoder.u8(3);
-    this.remote_identity.encode(encoder);
+    this.remoteIdentity.encode(encoder);
 
     encoder.u8(4);
-    if (this.pending_prekey) {
+    if (this.pendingPrekey) {
       encoder.object(2);
       encoder.u8(0);
-      encoder.u16(<number>this.pending_prekey[0]);
+      encoder.u16(<number>this.pendingPrekey[0]);
       encoder.u8(1);
-      (<PublicKey>this.pending_prekey[1]).encode(encoder);
+      (<PublicKey>this.pendingPrekey[1]).encode(encoder);
     } else {
       encoder.null();
     }
 
     encoder.u8(5);
-    encoder.object(Object.keys(this.session_states).length);
+    encoder.object(Object.keys(this.sessionStates).length);
 
-    for (const index in this.session_states) {
-      const state = this.session_states[index];
+    for (const index in this.sessionStates) {
+      const state = this.sessionStates[index];
       state.tag.encode(encoder);
       state.state.encode(encoder);
     }
   }
 
-  static decode(local_identity: IdentityKeyPair, decoder: CBOR.Decoder): Session {
-    const self = ClassUtil.new_instance(this);
+  static decode(localIdentity: IdentityKeyPair, decoder: CBOR.Decoder): Session {
+    const self = ClassUtil.newInstance(Session);
 
     const nprops = decoder.object();
     for (let index = 0; index <= nprops - 1; index++) {
@@ -348,35 +343,35 @@ export class Session {
           break;
         }
         case 1: {
-          self.session_tag = SessionTag.decode(decoder);
+          self.sessionTag = SessionTag.decode(decoder);
           break;
         }
         case 2: {
-          const identity_key = IdentityKey.decode(decoder);
-          if (local_identity.public_key.fingerprint() !== identity_key.fingerprint()) {
+          const identityKey = IdentityKey.decode(decoder);
+          if (localIdentity.publicKey.fingerprint() !== identityKey.fingerprint()) {
             throw new DecodeError.LocalIdentityChanged(undefined, DecodeError.CODE.CASE_300);
           }
-          self.local_identity = local_identity;
+          self.localIdentity = localIdentity;
           break;
         }
         case 3: {
-          self.remote_identity = IdentityKey.decode(decoder);
+          self.remoteIdentity = IdentityKey.decode(decoder);
           break;
         }
         case 4: {
           switch (decoder.optional(() => decoder.object())) {
             case null:
-              self.pending_prekey = null;
+              self.pendingPrekey = null;
               break;
             case 2:
-              self.pending_prekey = [];
-              for (let key = 0; key <= 1; ++key) {
+              self.pendingPrekey = [];
+              for (let index = 0; index <= 1; ++index) {
                 switch (decoder.u8()) {
                   case 0:
-                    self.pending_prekey[0] = decoder.u16();
+                    self.pendingPrekey[0] = decoder.u16();
                     break;
                   case 1:
-                    self.pending_prekey[1] = PublicKey.decode(decoder);
+                    self.pendingPrekey[1] = PublicKey.decode(decoder);
                     break;
                 }
               }
@@ -387,13 +382,13 @@ export class Session {
           break;
         }
         case 5: {
-          self.session_states = {};
+          self.sessionStates = {};
 
           const nprops = decoder.object();
 
           for (let index = 0; index <= nprops - 1; index++) {
             const tag = SessionTag.decode(decoder);
-            self.session_states[tag.toString()] = {
+            self.sessionStates[tag.toString()] = {
               idx: index,
               state: SessionState.decode(decoder),
               tag,

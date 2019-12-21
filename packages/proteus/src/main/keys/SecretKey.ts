@@ -28,20 +28,20 @@ import * as ArrayUtil from '../util/ArrayUtil';
 import {PublicKey} from './PublicKey';
 
 export class SecretKey {
-  sec_curve: Uint8Array;
-  sec_edward: Uint8Array;
+  secCurve: Uint8Array;
+  secEdward: Uint8Array;
 
   constructor() {
-    this.sec_curve = new Uint8Array([]);
-    this.sec_edward = new Uint8Array([]);
+    this.secCurve = new Uint8Array([]);
+    this.secEdward = new Uint8Array([]);
   }
 
-  static new(sec_edward: Uint8Array, sec_curve: Uint8Array): SecretKey {
-    const sk = ClassUtil.new_instance(SecretKey);
+  static new(secEdward: Uint8Array, secCurve: Uint8Array): SecretKey {
+    const secretKeyInstance = ClassUtil.newInstance(SecretKey);
 
-    sk.sec_edward = sec_edward;
-    sk.sec_curve = sec_curve;
-    return sk;
+    secretKeyInstance.secEdward = secEdward;
+    secretKeyInstance.secCurve = secCurve;
+    return secretKeyInstance;
   }
 
   /**
@@ -50,46 +50,46 @@ export class SecretKey {
    * @returns A message signature
    */
   sign(message: Uint8Array | string): Uint8Array {
-    return sodium.crypto_sign_detached(message, this.sec_edward);
+    return sodium.crypto_sign_detached(message, this.secEdward);
   }
 
   /**
    * This function can be used to compute a shared secret given a user's secret key and another
    * user's public key.
-   * @param public_key Another user's public key
+   * @param publicKey Another user's public key
    * @returns Array buffer view of the computed shared secret
    */
-  shared_secret(public_key: PublicKey): Uint8Array {
-    const shared_secret = sodium.crypto_scalarmult(this.sec_curve, public_key.pub_curve);
+  sharedSecret(publicKey: PublicKey): Uint8Array {
+    const sharedSecret = sodium.crypto_scalarmult(this.secCurve, publicKey.pubCurve);
 
-    ArrayUtil.assert_is_not_zeros(shared_secret);
+    ArrayUtil.assertIsNotZeros(sharedSecret);
 
-    return shared_secret;
+    return sharedSecret;
   }
 
   encode(encoder: CBOR.Encoder): CBOR.Encoder {
     encoder.object(1);
     encoder.u8(0);
-    return encoder.bytes(this.sec_edward);
+    return encoder.bytes(this.secEdward);
   }
 
   static decode(decoder: CBOR.Decoder): SecretKey {
-    const self = ClassUtil.new_instance(SecretKey);
+    const self = ClassUtil.newInstance(SecretKey);
 
     const nprops = decoder.object();
     for (let index = 0; index <= nprops - 1; index++) {
       switch (decoder.u8()) {
         case 0:
-          self.sec_edward = new Uint8Array(decoder.bytes());
+          self.secEdward = new Uint8Array(decoder.bytes());
           break;
         default:
           decoder.skip();
       }
     }
 
-    const sec_curve = ed2curve.convertSecretKey(self.sec_edward);
-    if (sec_curve) {
-      self.sec_curve = sec_curve;
+    const secCurve = ed2curve.convertSecretKey(self.secEdward);
+    if (secCurve) {
+      self.secCurve = secCurve;
       return self;
     }
     throw new InputError.ConversionError('Could not convert public key with ed2curve.', 408);

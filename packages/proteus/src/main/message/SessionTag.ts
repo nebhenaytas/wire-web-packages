@@ -34,9 +34,9 @@ export class SessionTag {
   static new(): SessionTag {
     const length = 16;
 
-    const st = ClassUtil.new_instance(SessionTag);
-    st.tag = RandomUtil.random_bytes(length);
-    return st;
+    const sessionTagInstance = ClassUtil.newInstance(SessionTag);
+    sessionTagInstance.tag = RandomUtil.randomBytes(length);
+    return sessionTagInstance;
   }
 
   toString(): string {
@@ -58,8 +58,8 @@ export class SessionTag {
       );
     }
 
-    const st = ClassUtil.new_instance(SessionTag);
-    st.tag = new Uint8Array(bytes);
-    return st;
+    const self = ClassUtil.newInstance(SessionTag);
+    self.tag = new Uint8Array(bytes);
+    return self;
   }
 }

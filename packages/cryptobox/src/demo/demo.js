@@ -18,7 +18,7 @@ logger.log(`Testing Cryptobox v${cryptobox.Cryptobox.VERSION}`);
 
     await box.create();
 
-    const fingerprint = box.identity.public_key.fingerprint();
+    const fingerprint = box.identity.publicKey.fingerprint();
     logger.log(`Public Fingerprint: ${fingerprint}`);
     process.exit(0);
   } catch (error) {

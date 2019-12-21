@@ -26,7 +26,7 @@ const _sodium = require('libsodium-wrappers-sumo');
   const Proteus = require('@wireapp/proteus');
 
   const identity = await Proteus.keys.IdentityKeyPair.new();
-  const fingerprint = identity.public_key.fingerprint();
+  const fingerprint = identity.publicKey.fingerprint();
   const serializedIdentity = identity.serialise();
   const encodedSerializedIdentity = sodium.to_base64(
     new Uint8Array(serializedIdentity),

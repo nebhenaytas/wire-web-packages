@@ -25,20 +25,20 @@ import {InputError} from '../errors/InputError';
 import * as ClassUtil from '../util/ClassUtil';
 
 export class PublicKey {
-  pub_edward: Uint8Array;
-  pub_curve: Uint8Array;
+  pubEdward: Uint8Array;
+  pubCurve: Uint8Array;
 
   constructor() {
-    this.pub_edward = new Uint8Array([]);
-    this.pub_curve = new Uint8Array([]);
+    this.pubEdward = new Uint8Array([]);
+    this.pubCurve = new Uint8Array([]);
   }
 
-  static new(pub_edward: Uint8Array, pub_curve: Uint8Array): PublicKey {
-    const pk = ClassUtil.new_instance(PublicKey);
+  static new(pubEdward: Uint8Array, pubCurve: Uint8Array): PublicKey {
+    const preKeyInstance = ClassUtil.newInstance(PublicKey);
 
-    pk.pub_edward = pub_edward;
-    pk.pub_curve = pub_curve;
-    return pk;
+    preKeyInstance.pubEdward = pubEdward;
+    preKeyInstance.pubCurve = pubCurve;
+    return preKeyInstance;
   }
 
   /**
@@ -49,36 +49,36 @@ export class PublicKey {
    * @returns `true` if the signature is valid, `false` otherwise.
    */
   verify(signature: Uint8Array, message: Uint8Array | string): boolean {
-    return sodium.crypto_sign_verify_detached(signature, message, this.pub_edward);
+    return sodium.crypto_sign_verify_detached(signature, message, this.pubEdward);
   }
 
   fingerprint(): string {
-    return sodium.to_hex(this.pub_edward);
+    return sodium.to_hex(this.pubEdward);
   }
 
   encode(encoder: CBOR.Encoder): CBOR.Encoder {
     encoder.object(1);
     encoder.u8(0);
-    return encoder.bytes(this.pub_edward);
+    return encoder.bytes(this.pubEdward);
   }
 
   static decode(decoder: CBOR.Decoder): PublicKey {
-    const self = ClassUtil.new_instance(PublicKey);
+    const self = ClassUtil.newInstance(PublicKey);
 
     const nprops = decoder.object();
     for (let index = 0; index <= nprops - 1; index++) {
       switch (decoder.u8()) {
         case 0:
-          self.pub_edward = new Uint8Array(decoder.bytes());
+          self.pubEdward = new Uint8Array(decoder.bytes());
           break;
         default:
           decoder.skip();
       }
     }
 
-    const pub_curve = ed2curve.convertPublicKey(self.pub_edward);
-    if (pub_curve) {
-      self.pub_curve = pub_curve;
+    const pubCurve = ed2curve.convertPublicKey(self.pubEdward);
+    if (pubCurve) {
+      self.pubCurve = pubCurve;
       return self;
     }
     throw new InputError.ConversionError('Could not convert private key with ed2curve.', 409);

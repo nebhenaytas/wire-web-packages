@@ -28,60 +28,60 @@ import {CipherMessage} from './CipherMessage';
 import {Message} from './Message';
 
 export class PreKeyMessage extends Message {
-  base_key: PublicKey;
-  identity_key: IdentityKey;
+  baseKey: PublicKey;
+  identityKey: IdentityKey;
   message: CipherMessage;
-  prekey_id: number;
+  prekeyId: number;
 
   constructor() {
     super();
-    this.base_key = new PublicKey();
-    this.identity_key = new IdentityKey();
+    this.baseKey = new PublicKey();
+    this.identityKey = new IdentityKey();
     this.message = new CipherMessage();
-    this.prekey_id = -1;
+    this.prekeyId = -1;
   }
 
-  static new(prekey_id: number, base_key: PublicKey, identity_key: IdentityKey, message: CipherMessage): PreKeyMessage {
-    const pkm = ClassUtil.new_instance(PreKeyMessage);
+  static new(prekeyId: number, baseKey: PublicKey, identityKey: IdentityKey, message: CipherMessage): PreKeyMessage {
+    const preyKeyMessageInstance = ClassUtil.newInstance(PreKeyMessage);
 
-    pkm.prekey_id = prekey_id;
-    pkm.base_key = base_key;
-    pkm.identity_key = identity_key;
-    pkm.message = message;
+    preyKeyMessageInstance.prekeyId = prekeyId;
+    preyKeyMessageInstance.baseKey = baseKey;
+    preyKeyMessageInstance.identityKey = identityKey;
+    preyKeyMessageInstance.message = message;
 
-    Object.freeze(pkm);
-    return pkm;
+    Object.freeze(preyKeyMessageInstance);
+    return preyKeyMessageInstance;
   }
 
   encode(encoder: CBOR.Encoder): CBOR.Encoder {
     encoder.object(4);
     encoder.u8(0);
-    encoder.u16(this.prekey_id);
+    encoder.u16(this.prekeyId);
     encoder.u8(1);
-    this.base_key.encode(encoder);
+    this.baseKey.encode(encoder);
     encoder.u8(2);
-    this.identity_key.encode(encoder);
+    this.identityKey.encode(encoder);
     encoder.u8(3);
     return this.message.encode(encoder);
   }
 
   static decode(decoder: CBOR.Decoder): PreKeyMessage {
-    let prekey_id = null;
-    let base_key = null;
-    let identity_key = null;
+    let prekeyId = null;
+    let baseKey = null;
+    let identityKey = null;
     let message = null;
 
     const nprops = decoder.object();
     for (let index = 0; index <= nprops - 1; index++) {
       switch (decoder.u8()) {
         case 0:
-          prekey_id = decoder.u16();
+          prekeyId = decoder.u16();
           break;
         case 1:
-          base_key = PublicKey.decode(decoder);
+          baseKey = PublicKey.decode(decoder);
           break;
         case 2:
-          identity_key = IdentityKey.decode(decoder);
+          identityKey = IdentityKey.decode(decoder);
           break;
         case 3:
           message = CipherMessage.decode(decoder);
@@ -91,10 +91,10 @@ export class PreKeyMessage extends Message {
       }
     }
 
-    prekey_id = Number(prekey_id);
+    prekeyId = Number(prekeyId);
 
-    if (!isNaN(prekey_id) && base_key && identity_key && message) {
-      return PreKeyMessage.new(prekey_id, base_key, identity_key, message);
+    if (!isNaN(prekeyId) && baseKey && identityKey && message) {
+      return PreKeyMessage.new(prekeyId, baseKey, identityKey, message);
     } else {
       throw new InputError.TypeError(`Given PreKeyMessage doesn't match expected signature.`, InputError.CODE.CASE_406);
     }

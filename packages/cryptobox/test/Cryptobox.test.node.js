@@ -47,11 +47,11 @@ describe('Cryptobox', () => {
       const mallory = await createCryptobox('mallory', 2);
       await mallory.create();
 
-      const bobBundle = Proteus.keys.PreKeyBundle.new(bob.identity.public_key, await bob.store.load_prekey(0));
-      const eveBundle = Proteus.keys.PreKeyBundle.new(eve.identity.public_key, await eve.store.load_prekey(0));
+      const bobBundle = Proteus.keys.PreKeyBundle.new(bob.identity.publicKey, await bob.store.loadPreykey(0));
+      const eveBundle = Proteus.keys.PreKeyBundle.new(eve.identity.publicKey, await eve.store.loadPreykey(0));
       const malloryBundle = Proteus.keys.PreKeyBundle.new(
-        mallory.identity.public_key,
-        await mallory.store.load_prekey(0),
+        mallory.identity.publicKey,
+        await mallory.store.loadPreykey(0),
       );
 
       const [bobPayload, evePayload, malloryPayload] = await Promise.all([
@@ -106,7 +106,7 @@ describe('Cryptobox', () => {
       const bob = await createCryptobox('bob', 2);
       await bob.create();
 
-      const bobBundle = Proteus.keys.PreKeyBundle.new(bob.identity.public_key, await bob.store.load_prekey(0));
+      const bobBundle = Proteus.keys.PreKeyBundle.new(bob.identity.publicKey, await bob.store.loadPreykey(0));
       const sessionName = 'alice-to-bob';
       await alice.encrypt(sessionName, 'Hello Bob. This is Alice.', bobBundle.serialise());
 
@@ -118,7 +118,7 @@ describe('Cryptobox', () => {
       const eve = await createCryptobox('eve', 5);
       await eve.create();
 
-      const aliceBundle = Proteus.keys.PreKeyBundle.new(alice.identity.public_key, await alice.store.load_prekey(0));
+      const aliceBundle = Proteus.keys.PreKeyBundle.new(alice.identity.publicKey, await alice.store.loadPreykey(0));
       const cipherText = await eve.encrypt('eve-to-alice', 'Hello Alice. This is Eve.', aliceBundle.serialise());
       await alice.decrypt('alice-to-eve', cipherText);
 
@@ -129,17 +129,17 @@ describe('Cryptobox', () => {
       expect(Object.keys(serializedAlice.sessions).length).toBe(expectedSessionsOfAlice);
 
       // Test that Alice and Eve are NOT the same
-      const aliceId = alice.identity.public_key.fingerprint();
-      let eveId = eve.identity.public_key.fingerprint();
+      const aliceId = alice.identity.publicKey.fingerprint();
+      let eveId = eve.identity.publicKey.fingerprint();
       expect(aliceId).not.toBe(eveId);
 
       // Test that Eve can import Alice's Identity
       await eve.deserialize(serializedAlice);
-      eveId = eve.identity.public_key.fingerprint();
+      eveId = eve.identity.publicKey.fingerprint();
       expect(aliceId).toBe(eveId);
 
       // Test that Eve can import Alice's PreKeys
-      const evePreKeys = await eve.store.load_prekeys();
+      const evePreKeys = await eve.store.loadPreykeys();
       expect(eve.lastResortPreKey).toBeDefined();
       expect(evePreKeys.length).toBe(amountOfAlicePreKeys);
 

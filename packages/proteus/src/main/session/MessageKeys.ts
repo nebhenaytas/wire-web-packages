@@ -24,59 +24,59 @@ import {MacKey} from '../derived/MacKey';
 import * as ClassUtil from '../util/ClassUtil';
 
 export class MessageKeys {
-  cipher_key: CipherKey;
+  cipherKey: CipherKey;
   counter: number;
-  mac_key: MacKey;
+  macKey: MacKey;
 
   constructor() {
-    this.cipher_key = new CipherKey();
+    this.cipherKey = new CipherKey();
     this.counter = -1;
-    this.mac_key = new MacKey(new Uint8Array([]));
+    this.macKey = new MacKey(new Uint8Array([]));
   }
 
-  static new(cipher_key: CipherKey, mac_key: MacKey, counter: number): MessageKeys {
-    const mk = ClassUtil.new_instance(MessageKeys);
-    mk.cipher_key = cipher_key;
-    mk.mac_key = mac_key;
-    mk.counter = counter;
-    return mk;
+  static new(cipherKey: CipherKey, macKey: MacKey, counter: number): MessageKeys {
+    const messageKeysInstance = ClassUtil.newInstance(MessageKeys);
+    messageKeysInstance.cipherKey = cipherKey;
+    messageKeysInstance.macKey = macKey;
+    messageKeysInstance.counter = counter;
+    return messageKeysInstance;
   }
 
-  private _counter_as_nonce(): Uint8Array {
+  private counterAsNonce(): Uint8Array {
     const nonce = new ArrayBuffer(8);
     new DataView(nonce).setUint32(0, this.counter);
     return new Uint8Array(nonce);
   }
 
   encrypt(plaintext: string | Uint8Array): Uint8Array {
-    return this.cipher_key.encrypt(plaintext, this._counter_as_nonce());
+    return this.cipherKey.encrypt(plaintext, this.counterAsNonce());
   }
 
   decrypt(ciphertext: Uint8Array): Uint8Array {
-    return this.cipher_key.decrypt(ciphertext, this._counter_as_nonce());
+    return this.cipherKey.decrypt(ciphertext, this.counterAsNonce());
   }
 
   encode(encoder: CBOR.Encoder): CBOR.Encoder {
     encoder.object(3);
     encoder.u8(0);
-    this.cipher_key.encode(encoder);
+    this.cipherKey.encode(encoder);
     encoder.u8(1);
-    this.mac_key.encode(encoder);
+    this.macKey.encode(encoder);
     encoder.u8(2);
     return encoder.u32(this.counter);
   }
 
   static decode(decoder: CBOR.Decoder): MessageKeys {
-    const self = ClassUtil.new_instance(MessageKeys);
+    const self = ClassUtil.newInstance(MessageKeys);
 
     const nprops = decoder.object();
     for (let index = 0; index <= nprops - 1; index++) {
       switch (decoder.u8()) {
         case 0:
-          self.cipher_key = CipherKey.decode(decoder);
+          self.cipherKey = CipherKey.decode(decoder);
           break;
         case 1:
-          self.mac_key = MacKey.decode(decoder);
+          self.macKey = MacKey.decode(decoder);
           break;
         case 2:
           self.counter = decoder.u32();

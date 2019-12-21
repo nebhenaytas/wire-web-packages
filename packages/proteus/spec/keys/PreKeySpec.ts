@@ -27,14 +27,14 @@ beforeAll(async () => {
 describe('PreKey', () => {
   describe('Generation', () => {
     it('generates a PreKey', async () => {
-      const key_id = 0;
-      const pk = await Proteus.keys.PreKey.new(key_id);
-      expect(pk.key_id).toBe(key_id);
+      const keyId = 0;
+      const pk = await Proteus.keys.PreKey.new(keyId);
+      expect(pk.keyId).toBe(keyId);
     });
 
     it('generates a PreKey of last resort', async () => {
-      const pk = await Proteus.keys.PreKey.last_resort();
-      expect(pk.key_id).toBe(Proteus.keys.PreKey.MAX_PREKEY_ID);
+      const pk = await Proteus.keys.PreKey.lastResort();
+      expect(pk.keyId).toBe(Proteus.keys.PreKey.MAX_PREKEY_ID);
     });
 
     it('rejects undefined IDs', async () => {
@@ -98,54 +98,54 @@ describe('PreKey', () => {
     });
 
     it('generates ranges of PreKeys', async () => {
-      let prekeys = await Proteus.keys.PreKey.generate_prekeys(0, 0);
+      let prekeys = await Proteus.keys.PreKey.generatePrekeys(0, 0);
       expect(prekeys.length).toBe(0);
 
-      prekeys = await Proteus.keys.PreKey.generate_prekeys(0, 1);
+      prekeys = await Proteus.keys.PreKey.generatePrekeys(0, 1);
       expect(prekeys.length).toBe(1);
-      expect(prekeys[0].key_id).toBe(0);
+      expect(prekeys[0].keyId).toBe(0);
 
-      prekeys = await Proteus.keys.PreKey.generate_prekeys(0, 10);
+      prekeys = await Proteus.keys.PreKey.generatePrekeys(0, 10);
       expect(prekeys.length).toBe(10);
-      expect(prekeys[0].key_id).toBe(0);
-      expect(prekeys[9].key_id).toBe(9);
+      expect(prekeys[0].keyId).toBe(0);
+      expect(prekeys[9].keyId).toBe(9);
 
-      prekeys = await Proteus.keys.PreKey.generate_prekeys(3000, 10);
+      prekeys = await Proteus.keys.PreKey.generatePrekeys(3000, 10);
       expect(prekeys.length).toBe(10);
-      expect(prekeys[0].key_id).toBe(3000);
-      expect(prekeys[9].key_id).toBe(3009);
+      expect(prekeys[0].keyId).toBe(3000);
+      expect(prekeys[9].keyId).toBe(3009);
     });
 
     it('does not include the last resort pre key', async () => {
-      let prekeys = await Proteus.keys.PreKey.generate_prekeys(65530, 10);
+      let prekeys = await Proteus.keys.PreKey.generatePrekeys(65530, 10);
       expect(prekeys.length).toBe(10);
-      expect(prekeys[0].key_id).toBe(65530);
-      expect(prekeys[1].key_id).toBe(65531);
-      expect(prekeys[2].key_id).toBe(65532);
-      expect(prekeys[3].key_id).toBe(65533);
-      expect(prekeys[4].key_id).toBe(65534);
-      expect(prekeys[5].key_id).toBe(0);
-      expect(prekeys[6].key_id).toBe(1);
-      expect(prekeys[7].key_id).toBe(2);
-      expect(prekeys[8].key_id).toBe(3);
-      expect(prekeys[9].key_id).toBe(4);
+      expect(prekeys[0].keyId).toBe(65530);
+      expect(prekeys[1].keyId).toBe(65531);
+      expect(prekeys[2].keyId).toBe(65532);
+      expect(prekeys[3].keyId).toBe(65533);
+      expect(prekeys[4].keyId).toBe(65534);
+      expect(prekeys[5].keyId).toBe(0);
+      expect(prekeys[6].keyId).toBe(1);
+      expect(prekeys[7].keyId).toBe(2);
+      expect(prekeys[8].keyId).toBe(3);
+      expect(prekeys[9].keyId).toBe(4);
 
-      prekeys = await Proteus.keys.PreKey.generate_prekeys(Proteus.keys.PreKey.MAX_PREKEY_ID, 1);
+      prekeys = await Proteus.keys.PreKey.generatePrekeys(Proteus.keys.PreKey.MAX_PREKEY_ID, 1);
       expect(prekeys.length).toBe(1);
-      expect(prekeys[0].key_id).toBe(0);
+      expect(prekeys[0].keyId).toBe(0);
     });
   });
 
   describe('Serialisation', () => {
     it('serialises and deserialises correctly', async () => {
       const pk = await Proteus.keys.PreKey.new(0);
-      const pk_bytes = pk.serialise();
-      const pk_copy = Proteus.keys.PreKey.deserialise(pk_bytes);
+      const pkBytes = pk.serialise();
+      const pkCopy = Proteus.keys.PreKey.deserialise(pkBytes);
 
-      expect(pk_copy.version).toBe(pk.version);
-      expect(pk_copy.key_id).toBe(pk.key_id);
-      expect(pk_copy.key_pair.public_key.fingerprint()).toBe(pk.key_pair.public_key.fingerprint());
-      expect(sodium.to_hex(new Uint8Array(pk_bytes))).toBe(sodium.to_hex(new Uint8Array(pk_copy.serialise())));
+      expect(pkCopy.version).toBe(pk.version);
+      expect(pkCopy.keyId).toBe(pk.keyId);
+      expect(pkCopy.keyPair.publicKey.fingerprint()).toBe(pk.keyPair.publicKey.fingerprint());
+      expect(sodium.to_hex(new Uint8Array(pkBytes))).toBe(sodium.to_hex(new Uint8Array(pkCopy.serialise())));
     });
   });
 });

@@ -34,44 +34,44 @@ export interface SerialisedJSON {
 
 export class PreKeyBundle {
   version: number;
-  prekey_id: number;
-  public_key: PublicKey;
-  identity_key: IdentityKey;
+  prekeyId: number;
+  publicKey: PublicKey;
+  identityKey: IdentityKey;
   signature: Uint8Array | null | undefined;
 
   constructor() {
     this.version = -1;
-    this.prekey_id = -1;
-    this.public_key = new PublicKey();
-    this.identity_key = new IdentityKey();
+    this.prekeyId = -1;
+    this.publicKey = new PublicKey();
+    this.identityKey = new IdentityKey();
     this.signature = null;
   }
 
-  static new(public_identity_key: IdentityKey, prekey: PreKey): PreKeyBundle {
-    const bundle = ClassUtil.new_instance(PreKeyBundle);
+  static new(publicIdentityKey: IdentityKey, prekey: PreKey): PreKeyBundle {
+    const preKeyBundleInstance = ClassUtil.newInstance(PreKeyBundle);
 
-    bundle.version = 1;
-    bundle.prekey_id = prekey.key_id;
-    bundle.public_key = prekey.key_pair.public_key;
-    bundle.identity_key = public_identity_key;
-    bundle.signature = null;
+    preKeyBundleInstance.version = 1;
+    preKeyBundleInstance.prekeyId = prekey.keyId;
+    preKeyBundleInstance.publicKey = prekey.keyPair.publicKey;
+    preKeyBundleInstance.identityKey = publicIdentityKey;
+    preKeyBundleInstance.signature = null;
 
-    return bundle;
+    return preKeyBundleInstance;
   }
 
-  static signed(identity_pair: IdentityKeyPair, prekey: PreKey): PreKeyBundle {
-    const ratchet_key = prekey.key_pair.public_key;
-    const signature = identity_pair.secret_key.sign(ratchet_key.pub_edward);
+  static signed(identityPair: IdentityKeyPair, prekey: PreKey): PreKeyBundle {
+    const ratchetKey = prekey.keyPair.publicKey;
+    const signature = identityPair.secretKey.sign(ratchetKey.pubEdward);
 
-    const bundle = ClassUtil.new_instance(PreKeyBundle);
+    const preKeyBundleInstance = ClassUtil.newInstance(PreKeyBundle);
 
-    bundle.version = 1;
-    bundle.prekey_id = prekey.key_id;
-    bundle.public_key = ratchet_key;
-    bundle.identity_key = identity_pair.public_key;
-    bundle.signature = signature;
+    preKeyBundleInstance.version = 1;
+    preKeyBundleInstance.prekeyId = prekey.keyId;
+    preKeyBundleInstance.publicKey = ratchetKey;
+    preKeyBundleInstance.identityKey = identityPair.publicKey;
+    preKeyBundleInstance.signature = signature;
 
-    return bundle;
+    return preKeyBundleInstance;
   }
 
   verify(): PreKeyAuth {
@@ -79,9 +79,10 @@ export class PreKeyBundle {
       return PreKeyAuth.UNKNOWN;
     }
 
-    if (this.identity_key.public_key.verify(this.signature, this.public_key.pub_edward)) {
+    if (this.identityKey.publicKey.verify(this.signature, this.publicKey.pubEdward)) {
       return PreKeyAuth.VALID;
     }
+
     return PreKeyAuth.INVALID;
   }
 
@@ -91,15 +92,15 @@ export class PreKeyBundle {
     return encoder.get_buffer();
   }
 
-  serialised_json(): SerialisedJSON {
+  serialisedJson(): SerialisedJSON {
     return {
-      id: this.prekey_id,
+      id: this.prekeyId,
       key: sodium.to_base64(new Uint8Array(this.serialise()), sodium.base64_variants.ORIGINAL),
     };
   }
 
-  static deserialise(buf: ArrayBuffer): PreKeyBundle {
-    return PreKeyBundle.decode(new CBOR.Decoder(buf));
+  static deserialise(buffer: ArrayBuffer): PreKeyBundle {
+    return PreKeyBundle.decode(new CBOR.Decoder(buffer));
   }
 
   encode(encoder: CBOR.Encoder): CBOR.Encoder {
@@ -107,11 +108,11 @@ export class PreKeyBundle {
     encoder.u8(0);
     encoder.u8(this.version);
     encoder.u8(1);
-    encoder.u16(this.prekey_id);
+    encoder.u16(this.prekeyId);
     encoder.u8(2);
-    this.public_key.encode(encoder);
+    this.publicKey.encode(encoder);
     encoder.u8(3);
-    this.identity_key.encode(encoder);
+    this.identityKey.encode(encoder);
 
     encoder.u8(4);
     if (!this.signature) {
@@ -121,7 +122,7 @@ export class PreKeyBundle {
   }
 
   static decode(decoder: CBOR.Decoder): PreKeyBundle {
-    const self = ClassUtil.new_instance(PreKeyBundle);
+    const self = ClassUtil.newInstance(PreKeyBundle);
 
     const nprops = decoder.object();
     for (let index = 0; index <= nprops - 1; index++) {
@@ -130,13 +131,13 @@ export class PreKeyBundle {
           self.version = decoder.u8();
           break;
         case 1:
-          self.prekey_id = decoder.u16();
+          self.prekeyId = decoder.u16();
           break;
         case 2:
-          self.public_key = PublicKey.decode(decoder);
+          self.publicKey = PublicKey.decode(decoder);
           break;
         case 3:
-          self.identity_key = IdentityKey.decode(decoder);
+          self.identityKey = IdentityKey.decode(decoder);
           break;
         case 4:
           self.signature = decoder.optional(() => new Uint8Array(decoder.bytes()));

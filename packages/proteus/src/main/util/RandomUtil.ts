@@ -17,12 +17,12 @@
  *
  */
 
-export const random_bytes = (length: number): Uint8Array => {
+export const randomBytes = (length: number): Uint8Array => {
   if (typeof window !== 'undefined' && window.crypto) {
     // browser
     const buffer = new ArrayBuffer(length);
-    const buffer_view = new Uint8Array(buffer);
-    return window.crypto.getRandomValues(buffer_view);
+    const bufferView = new Uint8Array(buffer);
+    return window.crypto.getRandomValues(bufferView);
   } else {
     // node
     const crypto = require('crypto');

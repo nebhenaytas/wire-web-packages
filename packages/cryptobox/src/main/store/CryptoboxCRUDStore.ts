@@ -48,7 +48,7 @@ export class CryptoboxCRUDStore implements ProteusSession.PreKeyStore {
     return Encoder.toBase64(serialised).asString;
   }
 
-  public delete_all(): Promise<boolean> {
+  public deleteAll(): Promise<boolean> {
     return Promise.resolve()
       .then(() => this.engine.deleteAll(CryptoboxCRUDStore.STORES.LOCAL_IDENTITY))
       .then(() => this.engine.deleteAll(CryptoboxCRUDStore.STORES.PRE_KEYS))
@@ -60,7 +60,7 @@ export class CryptoboxCRUDStore implements ProteusSession.PreKeyStore {
    * Deletes a specified PreKey.
    * @return Promise<string> Resolves with the "ID" from the record, which has been deleted.
    */
-  public delete_prekey(prekey_id: number): Promise<number> {
+  public deletePrekey(prekey_id: number): Promise<number> {
     return this.engine.delete(CryptoboxCRUDStore.STORES.PRE_KEYS, prekey_id.toString()).then(() => prekey_id);
   }
 
@@ -68,7 +68,7 @@ export class CryptoboxCRUDStore implements ProteusSession.PreKeyStore {
    * Loads the local identity.
    * @return Promise<ProteusKeys.IdentityKeyPair> Resolves with the "key pair" from the local identity.
    */
-  public load_identity(): Promise<ProteusKeys.IdentityKeyPair | undefined> {
+  public loadIdentity(): Promise<ProteusKeys.IdentityKeyPair | undefined> {
     return this.engine
       .read<PersistedRecord>(CryptoboxCRUDStore.STORES.LOCAL_IDENTITY, CryptoboxCRUDStore.KEYS.LOCAL_IDENTITY)
       .then(record => {
@@ -88,7 +88,7 @@ export class CryptoboxCRUDStore implements ProteusSession.PreKeyStore {
    * Loads and deserializes a specified PreKey.
    * @return Promise<ProteusKeys.PreKey> Resolves with the the specified "PreKey".
    */
-  public load_prekey(prekey_id: number): Promise<ProteusKeys.PreKey | undefined> {
+  public loadPrekey(prekey_id: number): Promise<ProteusKeys.PreKey | undefined> {
     return this.engine
       .read<PersistedRecord>(CryptoboxCRUDStore.STORES.PRE_KEYS, prekey_id.toString())
       .then(record => {
@@ -106,7 +106,7 @@ export class CryptoboxCRUDStore implements ProteusSession.PreKeyStore {
   /**
    * Loads all available PreKeys.
    */
-  public load_prekeys(): Promise<ProteusKeys.PreKey[]> {
+  public loadPrekeys(): Promise<ProteusKeys.PreKey[]> {
     return this.engine.readAll<PersistedRecord>(CryptoboxCRUDStore.STORES.PRE_KEYS).then(records => {
       const preKeys: ProteusKeys.PreKey[] = [];
 
@@ -136,7 +136,7 @@ export class CryptoboxCRUDStore implements ProteusSession.PreKeyStore {
    */
   public save_prekey(pre_key: ProteusKeys.PreKey): Promise<ProteusKeys.PreKey> {
     const serialised = this.to_store(pre_key.serialise());
-    const payload = new SerialisedRecord(serialised, pre_key.key_id.toString());
+    const payload = new SerialisedRecord(serialised, pre_key.keyId.toString());
     return this.engine.create(CryptoboxCRUDStore.STORES.PRE_KEYS, payload.id, payload).then(() => pre_key);
   }
 

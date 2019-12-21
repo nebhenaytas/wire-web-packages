@@ -32,75 +32,75 @@ import {ChainKey} from './ChainKey';
 import {MessageKeys} from './MessageKeys';
 
 export class RecvChain {
-  chain_key: ChainKey;
-  message_keys: MessageKeys[];
-  ratchet_key: PublicKey;
-  static MAX_COUNTER_GAP = 1000;
+  static readonly MAX_COUNTER_GAP = 1000;
+  chainKey: ChainKey;
+  messageKeys: MessageKeys[];
+  ratchetKey: PublicKey;
 
   constructor() {
-    this.chain_key = new ChainKey();
-    this.message_keys = [];
-    this.ratchet_key = new PublicKey();
+    this.chainKey = new ChainKey();
+    this.messageKeys = [];
+    this.ratchetKey = new PublicKey();
   }
 
-  static new(chain_key: ChainKey, public_key: PublicKey): RecvChain {
-    const rc = ClassUtil.new_instance(RecvChain);
-    rc.chain_key = chain_key;
-    rc.ratchet_key = public_key;
-    rc.message_keys = [];
-    return rc;
+  static new(chainKey: ChainKey, publicKey: PublicKey): RecvChain {
+    const recvChainInstance = ClassUtil.newInstance(RecvChain);
+    recvChainInstance.chainKey = chainKey;
+    recvChainInstance.ratchetKey = publicKey;
+    recvChainInstance.messageKeys = [];
+    return recvChainInstance;
   }
 
-  try_message_keys(envelope: Envelope, msg: CipherMessage): Uint8Array {
-    if (this.message_keys[0]?.counter > msg.counter) {
-      const message = `Message too old. Counter for oldest staged chain key is '${this.message_keys[0].counter}' while message counter is '${msg.counter}'.`;
+  tryMessageKeys(envelope: Envelope, cipherMessage: CipherMessage): Uint8Array {
+    if (this.messageKeys[0]?.counter > cipherMessage.counter) {
+      const message = `Message too old. Counter for oldest staged chain key is '${this.messageKeys[0].counter}' while message counter is '${cipherMessage.counter}'.`;
       throw new DecryptError.OutdatedMessage(message, DecryptError.CODE.CASE_208);
     }
 
-    const idx = this.message_keys.findIndex(mk => {
-      return mk.counter === msg.counter;
-    });
+    const index = this.messageKeys.findIndex(messageKey => messageKey.counter === cipherMessage.counter);
 
-    if (idx === -1) {
+    if (index === -1) {
       throw new DecryptError.DuplicateMessage(undefined, DecryptError.CODE.CASE_209);
     }
-    const mk = this.message_keys.splice(idx, 1)[0];
-    if (!envelope.verify(mk.mac_key)) {
-      const message = `Envelope verification failed for message with counter behind. Message index is '${msg.counter}' while receive chain index is '${this.chain_key.idx}'.`;
+
+    const messageKeys = this.messageKeys.splice(index, 1)[0];
+
+    if (!envelope.verify(messageKeys.macKey)) {
+      const message = `Envelope verification failed for message with counter behind. Message index is '${cipherMessage.counter}' while receive chain index is '${this.chainKey.idx}'.`;
       throw new DecryptError.InvalidSignature(message, DecryptError.CODE.CASE_210);
     }
 
-    return mk.decrypt(msg.cipher_text);
+    return messageKeys.decrypt(cipherMessage.cipherText);
   }
 
-  stage_message_keys(msg: CipherMessage): [ChainKey, MessageKeys, MessageKeys[]] {
-    const num = msg.counter - this.chain_key.idx;
-    if (num > RecvChain.MAX_COUNTER_GAP) {
-      if (this.chain_key.idx === 0) {
+  stageMessageKeys(msg: CipherMessage): [ChainKey, MessageKeys, MessageKeys[]] {
+    const index = msg.counter - this.chainKey.idx;
+    if (index > RecvChain.MAX_COUNTER_GAP) {
+      if (this.chainKey.idx === 0) {
         throw new DecryptError.TooDistantFuture(
           'Skipped too many messages at the beginning of a receive chain.',
           DecryptError.CODE.CASE_211,
         );
       }
       throw new DecryptError.TooDistantFuture(
-        `Skipped too many messages within a used receive chain. Receive chain counter is '${this.chain_key.idx}'`,
+        `Skipped too many messages within a used receive chain. Receive chain counter is '${this.chainKey.idx}'`,
         DecryptError.CODE.CASE_212,
       );
     }
 
-    const keys: MessageKeys[] = [];
-    let chk = this.chain_key;
+    const messageKeys: MessageKeys[] = [];
+    let chainKey = this.chainKey;
 
-    for (let index = 0; index <= num - 1; index++) {
-      keys.push(chk.message_keys());
-      chk = chk.next();
+    for (let index = 0; index <= index - 1; index++) {
+      messageKeys.push(chainKey.messageKeys());
+      chainKey = chainKey.next();
     }
 
-    const mk = chk.message_keys();
-    return [chk, mk, keys];
+    const messageKey = chainKey.messageKeys();
+    return [chainKey, messageKey, messageKeys];
   }
 
-  commit_message_keys(keys: MessageKeys[]): void {
+  commitMessageMeys(keys: MessageKeys[]): void {
     if (keys.length > RecvChain.MAX_COUNTER_GAP) {
       throw new ProteusError(
         `Number of message keys (${keys.length}) exceed message chain counter gap (${RecvChain.MAX_COUNTER_GAP}).`,
@@ -108,13 +108,13 @@ export class RecvChain {
       );
     }
 
-    const excess = this.message_keys.length + keys.length - RecvChain.MAX_COUNTER_GAP;
+    const excess = this.messageKeys.length + keys.length - RecvChain.MAX_COUNTER_GAP;
 
     for (let index = 0; index <= excess - 1; index++) {
-      this.message_keys.shift();
+      this.messageKeys.shift();
     }
 
-    keys.map(key => this.message_keys.push(key));
+    keys.map(key => this.messageKeys.push(key));
 
     if (keys.length > RecvChain.MAX_COUNTER_GAP) {
       throw new ProteusError(
@@ -127,35 +127,35 @@ export class RecvChain {
   encode(encoder: CBOR.Encoder): CBOR.Encoder[] {
     encoder.object(3);
     encoder.u8(0);
-    this.chain_key.encode(encoder);
+    this.chainKey.encode(encoder);
     encoder.u8(1);
-    this.ratchet_key.encode(encoder);
+    this.ratchetKey.encode(encoder);
 
     encoder.u8(2);
-    encoder.array(this.message_keys.length);
-    return this.message_keys.map(key => key.encode(encoder));
+    encoder.array(this.messageKeys.length);
+    return this.messageKeys.map(key => key.encode(encoder));
   }
 
   static decode(decoder: CBOR.Decoder): RecvChain {
-    const self = ClassUtil.new_instance(RecvChain);
+    const self = ClassUtil.newInstance(RecvChain);
 
     const nprops = decoder.object();
     for (let index = 0; index <= nprops - 1; index++) {
       switch (decoder.u8()) {
         case 0: {
-          self.chain_key = ChainKey.decode(decoder);
+          self.chainKey = ChainKey.decode(decoder);
           break;
         }
         case 1: {
-          self.ratchet_key = PublicKey.decode(decoder);
+          self.ratchetKey = PublicKey.decode(decoder);
           break;
         }
         case 2: {
-          self.message_keys = [];
+          self.messageKeys = [];
 
-          let len = decoder.array();
-          while (len--) {
-            self.message_keys.push(MessageKeys.decode(decoder));
+          let length = decoder.array();
+          while (length--) {
+            self.messageKeys.push(MessageKeys.decode(decoder));
           }
           break;
         }

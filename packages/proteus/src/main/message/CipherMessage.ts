@@ -26,78 +26,78 @@ import {Message} from './Message';
 import {SessionTag} from './SessionTag';
 
 export class CipherMessage extends Message {
-  cipher_text: Uint8Array;
+  cipherText: Uint8Array;
   counter: number;
-  prev_counter: number;
-  ratchet_key: PublicKey;
-  session_tag: SessionTag;
+  prevCounter: number;
+  ratchetKey: PublicKey;
+  sessionTag: SessionTag;
 
   constructor() {
     super();
-    this.cipher_text = new Uint8Array([]);
+    this.cipherText = new Uint8Array([]);
     this.counter = -1;
-    this.prev_counter = -1;
-    this.ratchet_key = new PublicKey();
-    this.session_tag = new SessionTag();
+    this.prevCounter = -1;
+    this.ratchetKey = new PublicKey();
+    this.sessionTag = new SessionTag();
   }
 
   static new(
-    session_tag: SessionTag,
+    sessionTag: SessionTag,
     counter: number,
-    prev_counter: number,
-    ratchet_key: PublicKey,
-    cipher_text: Uint8Array,
+    prevCounter: number,
+    ratchetKey: PublicKey,
+    cipherText: Uint8Array,
   ): CipherMessage {
-    const cm = ClassUtil.new_instance(CipherMessage);
+    const cipherMessageInstance = ClassUtil.newInstance(CipherMessage);
 
-    cm.session_tag = session_tag;
-    cm.counter = counter;
-    cm.prev_counter = prev_counter;
-    cm.ratchet_key = ratchet_key;
-    cm.cipher_text = cipher_text;
+    cipherMessageInstance.sessionTag = sessionTag;
+    cipherMessageInstance.counter = counter;
+    cipherMessageInstance.prevCounter = prevCounter;
+    cipherMessageInstance.ratchetKey = ratchetKey;
+    cipherMessageInstance.cipherText = cipherText;
 
-    Object.freeze(cm);
-    return cm;
+    Object.freeze(cipherMessageInstance);
+    return cipherMessageInstance;
   }
 
   encode(encoder: CBOR.Encoder): CBOR.Encoder {
     encoder.object(5);
     encoder.u8(0);
-    this.session_tag.encode(encoder);
+    this.sessionTag.encode(encoder);
     encoder.u8(1);
     encoder.u32(this.counter);
     encoder.u8(2);
-    encoder.u32(this.prev_counter);
+    encoder.u32(this.prevCounter);
     encoder.u8(3);
-    this.ratchet_key.encode(encoder);
+    this.ratchetKey.encode(encoder);
     encoder.u8(4);
-    return encoder.bytes(this.cipher_text);
+    return encoder.bytes(this.cipherText);
   }
 
   static decode(decoder: CBOR.Decoder): CipherMessage {
-    let session_tag = null;
+    let sessionTag = null;
     let counter = null;
-    let prev_counter = null;
-    let ratchet_key = null;
-    let cipher_text = null;
+    let prevCounter = null;
+    let ratchetKey = null;
+    let cipherText = null;
 
     const nprops = decoder.object();
     for (let index = 0; index <= nprops - 1; index++) {
       switch (decoder.u8()) {
         case 0:
-          session_tag = SessionTag.decode(decoder);
+          sessionTag = SessionTag.decode(decoder);
           break;
         case 1:
           counter = decoder.u32();
           break;
         case 2:
-          prev_counter = decoder.u32();
+          prevCounter = decoder.u32();
           break;
         case 3:
-          ratchet_key = PublicKey.decode(decoder);
+          ratchetKey = PublicKey.decode(decoder);
           break;
         case 4:
-          cipher_text = new Uint8Array(decoder.bytes());
+          cipherText = new Uint8Array(decoder.bytes());
           break;
         default:
           decoder.skip();
@@ -105,10 +105,10 @@ export class CipherMessage extends Message {
     }
 
     counter = Number(counter);
-    prev_counter = Number(prev_counter);
+    prevCounter = Number(prevCounter);
 
-    if (session_tag && !isNaN(counter) && !isNaN(prev_counter) && ratchet_key && cipher_text) {
-      return CipherMessage.new(session_tag, counter, prev_counter, ratchet_key, cipher_text);
+    if (sessionTag && !isNaN(counter) && !isNaN(prevCounter) && ratchetKey && cipherText) {
+      return CipherMessage.new(sessionTag, counter, prevCounter, ratchetKey, cipherText);
     } else {
       throw new InputError.TypeError(`Given CipherMessage doesn't match expected signature.`, InputError.CODE.CASE_405);
     }

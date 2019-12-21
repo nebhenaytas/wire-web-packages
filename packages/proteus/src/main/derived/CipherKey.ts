@@ -30,9 +30,9 @@ export class CipherKey {
   }
 
   static new(key: Uint8Array): CipherKey {
-    const ck = ClassUtil.new_instance(CipherKey);
-    ck.key = key;
-    return ck;
+    const cipherKeyInstance = ClassUtil.newInstance(CipherKey);
+    cipherKeyInstance.key = key;
+    return cipherKeyInstance;
   }
 
   /**
@@ -60,18 +60,18 @@ export class CipherKey {
   }
 
   static decode(decoder: CBOR.Decoder): CipherKey {
-    let key_bytes = new Uint8Array([]);
+    let keyBytes = new Uint8Array([]);
 
     const nprops = decoder.object();
     for (let index = 0; index <= nprops - 1; index++) {
       switch (decoder.u8()) {
         case 0:
-          key_bytes = new Uint8Array(decoder.bytes());
+          keyBytes = new Uint8Array(decoder.bytes());
           break;
         default:
           decoder.skip();
       }
     }
-    return CipherKey.new(key_bytes);
+    return CipherKey.new(keyBytes);
   }
 }

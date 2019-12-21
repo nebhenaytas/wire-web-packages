@@ -45,10 +45,10 @@ export class CryptoboxSession {
   }
 
   public fingerprint_local(): string {
-    return this.session.local_identity.public_key.fingerprint();
+    return this.session.localIdentity.publicKey.fingerprint();
   }
 
   public fingerprint_remote(): string {
-    return this.session.remote_identity.fingerprint();
+    return this.session.remoteIdentity.fingerprint();
   }
 }

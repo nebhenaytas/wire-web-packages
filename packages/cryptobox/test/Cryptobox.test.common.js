@@ -57,7 +57,7 @@ describe('cryptobox.Cryptobox', () => {
       const bob = await createCryptobox('bob');
       const bobsPreKeys = await bob.create();
 
-      const bobBundle = Proteus.keys.PreKeyBundle.new(bob.identity.public_key, bobsPreKeys[0]);
+      const bobBundle = Proteus.keys.PreKeyBundle.new(bob.identity.publicKey, bobsPreKeys[0]);
 
       const plaintext = 'Hello, Bob!';
       const ciphertext = await alice.encrypt('session-with-bob', plaintext, bobBundle.serialise());
@@ -86,17 +86,17 @@ describe('cryptobox.Cryptobox', () => {
 
       const identity = await box.store.load_identity();
       expect(identity).toBeDefined();
-      expect(identity.public_key.fingerprint()).toBeDefined();
+      expect(identity.publicKey.fingerprint()).toBeDefined();
 
-      const preKey = await box.store.load_prekey(Proteus.keys.PreKey.MAX_PREKEY_ID);
-      expect(preKey.key_id).toBe(Proteus.keys.PreKey.MAX_PREKEY_ID);
+      const preKey = await box.store.loadPreykey(Proteus.keys.PreKey.MAX_PREKEY_ID);
+      expect(preKey.keyId).toBe(Proteus.keys.PreKey.MAX_PREKEY_ID);
     });
 
     it('initializes a Cryptobox with a defined amount of PreKeys (including the last resort PreKey)', async () => {
       const box = new cryptobox.Cryptobox(engine, 10);
       await box.create();
-      const preKeys = await box.store.load_prekeys();
-      const lastResortPreKey = preKeys.filter(preKey => preKey.key_id === Proteus.keys.PreKey.MAX_PREKEY_ID);
+      const preKeys = await box.store.loadPreykeys();
+      const lastResortPreKey = preKeys.filter(preKey => preKey.keyId === Proteus.keys.PreKey.MAX_PREKEY_ID);
       expect(preKeys.length).toBe(10);
       expect(box.lastResortPreKey).toBeDefined();
       expect(box.lastResortPreKey).toEqual(lastResortPreKey[0]);
@@ -114,18 +114,18 @@ describe('cryptobox.Cryptobox', () => {
 
       const initialPreKeys = await box.create();
       const lastResortPreKey = initialPreKeys[initialPreKeys.length - 1];
-      expect(lastResortPreKey.key_id).toBe(Proteus.keys.PreKey.MAX_PREKEY_ID);
+      expect(lastResortPreKey.keyId).toBe(Proteus.keys.PreKey.MAX_PREKEY_ID);
 
       const identity = box.identity;
       expect(identity).toBeDefined();
-      expect(identity.public_key.fingerprint()).toBeDefined();
+      expect(identity.publicKey.fingerprint()).toBeDefined();
 
-      initialFingerPrint = identity.public_key.fingerprint();
+      initialFingerPrint = identity.publicKey.fingerprint();
 
       box = new cryptobox.Cryptobox(engine);
       expect(box.identity).not.toBeDefined();
       await box.load();
-      expect(box.identity.public_key.fingerprint()).toBe(initialFingerPrint);
+      expect(box.identity.publicKey.fingerprint()).toBe(initialFingerPrint);
     });
 
     it('fails to initialize a Cryptobox of which the identity is missing', async () => {
@@ -156,7 +156,7 @@ describe('cryptobox.Cryptobox', () => {
         expect(box.identity).toBeDefined();
         await box.store.delete_prekey(Proteus.keys.PreKey.MAX_PREKEY_ID);
 
-        const prekey = await box.store.load_prekey(Proteus.keys.PreKey.MAX_PREKEY_ID);
+        const prekey = await box.store.loadPreykey(Proteus.keys.PreKey.MAX_PREKEY_ID);
         expect(prekey).not.toBeDefined();
 
         box = new cryptobox.Cryptobox(engine);
@@ -197,9 +197,9 @@ describe('cryptobox.Cryptobox', () => {
         prekey: await Proteus.keys.PreKey.new(Proteus.keys.PreKey.MAX_PREKEY_ID),
       };
 
-      bob.bundle = Proteus.keys.PreKeyBundle.new(bob.identity.public_key, bob.prekey);
+      bob.bundle = Proteus.keys.PreKeyBundle.new(bob.identity.publicKey, bob.prekey);
 
-      const session = await Proteus.session.Session.init_from_prekey(box.identity, bob.bundle);
+      const session = await Proteus.session.Session.initFromPrekey(box.identity, bob.bundle);
       const cryptoBoxSession = new cryptobox.CryptoboxSession(sessionIdUnique, session);
       await box.session_save(cryptoBoxSession);
     });

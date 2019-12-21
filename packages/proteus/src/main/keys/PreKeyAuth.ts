@@ -17,8 +17,8 @@
  *
  */
 
-export class PreKeyAuth {
-  static INVALID = 'Invalid';
-  static UNKNOWN = 'Unknown';
-  static VALID = 'Valid';
+export enum PreKeyAuth {
+  INVALID = 'Invalid',
+  UNKNOWN = 'Unknown',
+  VALID = 'Valid',
 }

@@ -35,9 +35,9 @@ export async function createEncodedCipherText(
   const sender = new Cryptobox(senderEngine, 1);
   await sender.create();
 
-  const sessionId = `from-${sender.identity!.public_key.fingerprint()}-to-${preKey.key_pair.public_key.fingerprint()}`;
+  const sessionId = `from-${sender.identity!.publicKey.fingerprint()}-to-${preKey.keyPair.publicKey.fingerprint()}`;
 
-  const alicePublicKey = receiver.public_key;
+  const alicePublicKey = receiver.publicKey;
   const publicPreKeyBundle = Proteus.keys.PreKeyBundle.new(alicePublicKey, preKey);
   const encryptedPreKeyMessage = await sender.encrypt(sessionId, text, publicPreKeyBundle.serialise());
   return bazinga64.Encoder.toBase64(encryptedPreKeyMessage).asString;

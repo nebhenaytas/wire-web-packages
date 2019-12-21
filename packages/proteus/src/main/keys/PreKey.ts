@@ -30,54 +30,54 @@ import {KeyPair} from './KeyPair';
  * A Pre-Shared Key contains the public long-term identity and ephemeral handshake keys for the initial triple DH.
  */
 export class PreKey {
-  static MAX_PREKEY_ID = 0xffff;
-  key_id: number;
-  key_pair: KeyPair;
+  static readonly MAX_PREKEY_ID = 0xffff;
+  keyId: number;
+  keyPair: KeyPair;
   version: number;
 
   constructor() {
-    this.key_id = -1;
-    this.key_pair = new KeyPair();
+    this.keyId = -1;
+    this.keyPair = new KeyPair();
     this.version = -1;
   }
 
-  static async new(pre_key_id: number): Promise<PreKey> {
-    this.validate_pre_key_id(pre_key_id);
+  static async new(preKeyId: number): Promise<PreKey> {
+    this.validatePreKeyId(preKeyId);
 
-    const pk = ClassUtil.new_instance(PreKey);
+    const preKeyInstance = ClassUtil.newInstance(PreKey);
 
-    pk.version = 1;
-    pk.key_id = pre_key_id;
-    pk.key_pair = await KeyPair.new();
-    return pk;
+    preKeyInstance.version = 1;
+    preKeyInstance.keyId = preKeyId;
+    preKeyInstance.keyPair = await KeyPair.new();
+    return preKeyInstance;
   }
 
-  static validate_pre_key_id(pre_key_id: number): void {
-    if (pre_key_id === undefined) {
+  static validatePreKeyId(preKeyId: number): void {
+    if (preKeyId === undefined) {
       throw new InputError.TypeError('PreKey ID is undefined.', InputError.CODE.CASE_404);
     }
 
-    if (typeof pre_key_id === 'string') {
-      throw new InputError.TypeError(`PreKey ID "${pre_key_id}" is a string.`, InputError.CODE.CASE_403);
+    if (typeof preKeyId === 'string') {
+      throw new InputError.TypeError(`PreKey ID "${preKeyId}" is a string.`, InputError.CODE.CASE_403);
     }
 
-    if (pre_key_id % 1 !== 0) {
-      throw new InputError.TypeError(`PreKey ID "${pre_key_id}" is a floating-point number.`, InputError.CODE.CASE_403);
+    if (preKeyId % 1 !== 0) {
+      throw new InputError.TypeError(`PreKey ID "${preKeyId}" is a floating-point number.`, InputError.CODE.CASE_403);
     }
 
-    if (pre_key_id < 0 || pre_key_id > PreKey.MAX_PREKEY_ID) {
-      const message = `PreKey ID (${pre_key_id}) must be between or equal to 0 and ${PreKey.MAX_PREKEY_ID}.`;
+    if (preKeyId < 0 || preKeyId > PreKey.MAX_PREKEY_ID) {
+      const message = `PreKey ID (${preKeyId}) must be between or equal to 0 and ${PreKey.MAX_PREKEY_ID}.`;
       throw new InputError.RangeError(message, InputError.CODE.CASE_400);
     }
   }
 
-  static last_resort(): Promise<PreKey> {
+  static lastResort(): Promise<PreKey> {
     return PreKey.new(PreKey.MAX_PREKEY_ID);
   }
 
-  static async generate_prekeys(start: number, size: number): Promise<PreKey[]> {
-    this.validate_pre_key_id(start);
-    this.validate_pre_key_id(size);
+  static async generatePrekeys(start: number, size: number): Promise<PreKey[]> {
+    this.validatePreKeyId(start);
+    this.validatePreKeyId(size);
 
     if (size === 0) {
       return [];
@@ -94,8 +94,8 @@ export class PreKey {
     return encoder.get_buffer();
   }
 
-  static deserialise(buf: ArrayBuffer): PreKey {
-    return PreKey.decode(new CBOR.Decoder(buf));
+  static deserialise(buffer: ArrayBuffer): PreKey {
+    return PreKey.decode(new CBOR.Decoder(buffer));
   }
 
   encode(encoder: CBOR.Encoder): CBOR.Encoder {
@@ -103,13 +103,13 @@ export class PreKey {
     encoder.u8(0);
     encoder.u8(this.version);
     encoder.u8(1);
-    encoder.u16(this.key_id);
+    encoder.u16(this.keyId);
     encoder.u8(2);
-    return this.key_pair.encode(encoder);
+    return this.keyPair.encode(encoder);
   }
 
   static decode(decoder: CBOR.Decoder): PreKey {
-    const self = ClassUtil.new_instance(PreKey);
+    const self = ClassUtil.newInstance(PreKey);
 
     const nprops = decoder.object();
     for (let index = 0; index <= nprops - 1; index++) {
@@ -118,10 +118,10 @@ export class PreKey {
           self.version = decoder.u8();
           break;
         case 1:
-          self.key_id = decoder.u16();
+          self.keyId = decoder.u16();
           break;
         case 2:
-          self.key_pair = KeyPair.decode(decoder);
+          self.keyPair = KeyPair.decode(decoder);
           break;
         default:
           decoder.skip();

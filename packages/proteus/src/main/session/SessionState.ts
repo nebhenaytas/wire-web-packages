@@ -46,171 +46,176 @@ import {SendChain} from './SendChain';
 import {Session} from './Session';
 
 export class SessionState {
-  prev_counter: number;
-  recv_chains: RecvChain[];
-  root_key: RootKey;
-  send_chain: SendChain;
+  prevCounter: number;
+  recvChains: RecvChain[];
+  rootKey: RootKey;
+  sendChain: SendChain;
 
   constructor() {
-    this.prev_counter = -1;
-    this.recv_chains = [];
-    this.root_key = new RootKey();
-    this.send_chain = new SendChain();
+    this.prevCounter = -1;
+    this.recvChains = [];
+    this.rootKey = new RootKey();
+    this.sendChain = new SendChain();
   }
 
-  static async init_as_alice(
-    alice_identity_pair: IdentityKeyPair,
-    alice_base: IdentityKeyPair | KeyPair,
-    bob_pkbundle: PreKeyBundle,
+  static async initAsAlice(
+    aliceIdentityPair: IdentityKeyPair,
+    aliceBase: IdentityKeyPair | KeyPair,
+    bobPreyKeyBundle: PreKeyBundle,
   ): Promise<SessionState> {
-    const master_key = ArrayUtil.concatenate_array_buffers([
-      alice_identity_pair.secret_key.shared_secret(bob_pkbundle.public_key),
-      alice_base.secret_key.shared_secret(bob_pkbundle.identity_key.public_key),
-      alice_base.secret_key.shared_secret(bob_pkbundle.public_key),
+    const masterKey = ArrayUtil.concatenateArrayBuffers([
+      aliceIdentityPair.secretKey.sharedSecret(bobPreyKeyBundle.publicKey),
+      aliceBase.secretKey.sharedSecret(bobPreyKeyBundle.identityKey.publicKey),
+      aliceBase.secretKey.sharedSecret(bobPreyKeyBundle.publicKey),
     ]);
 
-    const derived_secrets = DerivedSecrets.kdf_without_salt(master_key, 'handshake');
-    MemoryUtil.zeroize(master_key);
+    const derivedSecrets = DerivedSecrets.kdfWithoutSalt(masterKey, 'handshake');
+    MemoryUtil.zeroize(masterKey);
 
-    const rootkey = RootKey.from_cipher_key(derived_secrets.cipher_key);
-    const chainkey = ChainKey.from_mac_key(derived_secrets.mac_key, 0);
+    const rootkey = RootKey.fromCipherKey(derivedSecrets.cipherKey);
+    const chainkey = ChainKey.fromMacKey(derivedSecrets.macKey, 0);
 
-    const recv_chains = [RecvChain.new(chainkey, bob_pkbundle.public_key)];
+    const recvChains = [RecvChain.new(chainkey, bobPreyKeyBundle.publicKey)];
 
-    const send_ratchet = await KeyPair.new();
-    const [rok, chk] = rootkey.dh_ratchet(send_ratchet, bob_pkbundle.public_key);
-    const send_chain = SendChain.new(chk, send_ratchet);
+    const sendRatchet = await KeyPair.new();
+    const [rok, chk] = rootkey.dhRatchet(sendRatchet, bobPreyKeyBundle.publicKey);
+    const sendChain = SendChain.new(chk, sendRatchet);
 
-    const state = ClassUtil.new_instance(SessionState);
-    state.recv_chains = recv_chains;
-    state.send_chain = send_chain;
-    state.root_key = rok;
-    state.prev_counter = 0;
-    return state;
+    const sessionStateInstance = ClassUtil.newInstance(SessionState);
+    sessionStateInstance.recvChains = recvChains;
+    sessionStateInstance.sendChain = sendChain;
+    sessionStateInstance.rootKey = rok;
+    sessionStateInstance.prevCounter = 0;
+    return sessionStateInstance;
   }
 
-  static init_as_bob(
-    bob_ident: IdentityKeyPair,
-    bob_prekey: KeyPair,
-    alice_ident: IdentityKey,
-    alice_base: PublicKey,
+  static initAsBob(
+    bobIdentity: IdentityKeyPair,
+    bobPrekey: KeyPair,
+    aliceIdentityKey: IdentityKey,
+    aliceBase: PublicKey,
   ): SessionState {
-    const master_key = ArrayUtil.concatenate_array_buffers([
-      bob_prekey.secret_key.shared_secret(alice_ident.public_key),
-      bob_ident.secret_key.shared_secret(alice_base),
-      bob_prekey.secret_key.shared_secret(alice_base),
+    const masterKey = ArrayUtil.concatenateArrayBuffers([
+      bobPrekey.secretKey.sharedSecret(aliceIdentityKey.publicKey),
+      bobIdentity.secretKey.sharedSecret(aliceBase),
+      bobPrekey.secretKey.sharedSecret(aliceBase),
     ]);
 
-    const derived_secrets = DerivedSecrets.kdf_without_salt(master_key, 'handshake');
-    MemoryUtil.zeroize(master_key);
+    const derivedSecrets = DerivedSecrets.kdfWithoutSalt(masterKey, 'handshake');
+    MemoryUtil.zeroize(masterKey);
 
-    const rootkey = RootKey.from_cipher_key(derived_secrets.cipher_key);
-    const chainkey = ChainKey.from_mac_key(derived_secrets.mac_key, 0);
-    const send_chain = SendChain.new(chainkey, bob_prekey);
+    const rootkey = RootKey.fromCipherKey(derivedSecrets.cipherKey);
+    const chainkey = ChainKey.fromMacKey(derivedSecrets.macKey, 0);
+    const sendChainInstance = SendChain.new(chainkey, bobPrekey);
 
-    const state = ClassUtil.new_instance(SessionState);
-    state.recv_chains = [];
-    state.send_chain = send_chain;
-    state.root_key = rootkey;
-    state.prev_counter = 0;
-    return state;
+    const sessionStateInstance = ClassUtil.newInstance(SessionState);
+    sessionStateInstance.recvChains = [];
+    sessionStateInstance.sendChain = sendChainInstance;
+    sessionStateInstance.rootKey = rootkey;
+    sessionStateInstance.prevCounter = 0;
+    return sessionStateInstance;
   }
 
-  async ratchet(ratchet_key: PublicKey): Promise<void> {
-    const new_ratchet = await KeyPair.new();
+  async ratchet(ratchetKey: PublicKey): Promise<void> {
+    const newRatchet = await KeyPair.new();
 
-    const [recv_root_key, recv_chain_key] = this.root_key.dh_ratchet(this.send_chain.ratchet_key, ratchet_key);
+    const [recvRootKey, recvChainKey] = this.rootKey.dhRatchet(this.sendChain.ratchetKey, ratchetKey);
 
-    const [send_root_key, send_chain_key] = recv_root_key.dh_ratchet(new_ratchet, ratchet_key);
+    const [sendRootKey, sendChainKey] = recvRootKey.dhRatchet(newRatchet, ratchetKey);
 
-    const recv_chain = RecvChain.new(recv_chain_key, ratchet_key);
-    const send_chain = SendChain.new(send_chain_key, new_ratchet);
+    const recvChain = RecvChain.new(recvChainKey, ratchetKey);
+    const sendChain = SendChain.new(sendChainKey, newRatchet);
 
-    this.root_key = send_root_key;
-    this.prev_counter = this.send_chain.chain_key.idx;
-    this.send_chain = send_chain;
+    this.rootKey = sendRootKey;
+    this.prevCounter = this.sendChain.chainKey.idx;
+    this.sendChain = sendChain;
 
-    this.recv_chains.unshift(recv_chain);
+    this.recvChains.unshift(recvChain);
 
-    if (this.recv_chains.length > Session.MAX_RECV_CHAINS) {
-      for (let index = Session.MAX_RECV_CHAINS; index < this.recv_chains.length; index++) {
-        MemoryUtil.zeroize(this.recv_chains[index]);
+    if (this.recvChains.length > Session.MAX_RECV_CHAINS) {
+      for (let index = Session.MAX_RECV_CHAINS; index < this.recvChains.length; index++) {
+        MemoryUtil.zeroize(this.recvChains[index]);
       }
 
-      this.recv_chains = this.recv_chains.slice(0, Session.MAX_RECV_CHAINS);
+      this.recvChains = this.recvChains.slice(0, Session.MAX_RECV_CHAINS);
     }
   }
 
   /**
-   * @param identity_key Public identity key of the local identity key pair
-   * @param pending Pending pre-key
-   * @param tag Session tag
+   * @param identityKey Public identity key of the local identity key pair
+   * @param pendingPreykey Pending pre-key
+   * @param sessionTag Session tag
    * @param plaintext The plaintext to encrypt
    */
   encrypt(
-    identity_key: IdentityKey,
-    pending: (number | PublicKey)[] | null,
-    tag: SessionTag,
+    identityKey: IdentityKey,
+    pendingPreykey: (number | PublicKey)[] | null,
+    sessionTag: SessionTag,
     plaintext: string | Uint8Array,
   ): Envelope {
-    const msgkeys = this.send_chain.chain_key.message_keys();
+    const msgkeys = this.sendChain.chainKey.messageKeys();
 
     let message: Message = CipherMessage.new(
-      tag,
-      this.send_chain.chain_key.idx,
-      this.prev_counter,
-      this.send_chain.ratchet_key.public_key,
+      sessionTag,
+      this.sendChain.chainKey.idx,
+      this.prevCounter,
+      this.sendChain.ratchetKey.publicKey,
       msgkeys.encrypt(plaintext),
     );
 
-    if (pending) {
-      message = PreKeyMessage.new(<number>pending[0], <PublicKey>pending[1], identity_key, <CipherMessage>message);
+    if (pendingPreykey) {
+      message = PreKeyMessage.new(
+        pendingPreykey[0] as number,
+        pendingPreykey[1] as PublicKey,
+        identityKey,
+        message as CipherMessage,
+      );
     }
 
-    const env = Envelope.new(msgkeys.mac_key, message);
-    this.send_chain.chain_key = this.send_chain.chain_key.next();
-    return env;
+    const envelopeInstance = Envelope.new(msgkeys.macKey, message);
+    this.sendChain.chainKey = this.sendChain.chainKey.next();
+    return envelopeInstance;
   }
 
   async decrypt(envelope: Envelope, msg: CipherMessage): Promise<Uint8Array> {
-    let idx = this.recv_chains.findIndex(chain => chain.ratchet_key.fingerprint() === msg.ratchet_key.fingerprint());
+    let index = this.recvChains.findIndex(chain => chain.ratchetKey.fingerprint() === msg.ratchetKey.fingerprint());
 
-    if (idx === -1) {
-      await this.ratchet(msg.ratchet_key);
-      idx = 0;
+    if (index === -1) {
+      await this.ratchet(msg.ratchetKey);
+      index = 0;
     }
 
-    const rc = this.recv_chains[idx];
+    const receiveChain = this.recvChains[index];
 
-    if (msg.counter < rc.chain_key.idx) {
-      return rc.try_message_keys(envelope, msg);
-    } else if (msg.counter == rc.chain_key.idx) {
-      const mks = rc.chain_key.message_keys();
+    if (msg.counter < receiveChain.chainKey.idx) {
+      return receiveChain.tryMessageKeys(envelope, msg);
+    } else if (msg.counter == receiveChain.chainKey.idx) {
+      const messageKeys = receiveChain.chainKey.messageKeys();
 
-      if (!envelope.verify(mks.mac_key)) {
+      if (!envelope.verify(messageKeys.macKey)) {
         throw new DecryptError.InvalidSignature(
           `Envelope verification failed for message with counters in sync at '${msg.counter}'. The received message was possibly encrypted for another client.`,
           DecryptError.CODE.CASE_206,
         );
       }
 
-      const plain = mks.decrypt(msg.cipher_text);
-      rc.chain_key = rc.chain_key.next();
+      const plain = messageKeys.decrypt(msg.cipherText);
+      receiveChain.chainKey = receiveChain.chainKey.next();
       return plain;
     } else {
-      const [chk, mk, mks] = rc.stage_message_keys(msg);
+      const [chainKey, messageKey, messageKeys] = receiveChain.stageMessageKeys(msg);
 
-      if (!envelope.verify(mk.mac_key)) {
+      if (!envelope.verify(messageKey.macKey)) {
         throw new DecryptError.InvalidSignature(
-          `Envelope verification failed for message with counter ahead. Message index is '${msg.counter}' while receive chain index is '${rc.chain_key.idx}'.`,
+          `Envelope verification failed for message with counter ahead. Message index is '${msg.counter}' while receive chain index is '${receiveChain.chainKey.idx}'.`,
           DecryptError.CODE.CASE_207,
         );
       }
 
-      const plain = mk.decrypt(msg.cipher_text);
+      const plain = messageKey.decrypt(msg.cipherText);
 
-      rc.chain_key = chk.next();
-      rc.commit_message_keys(mks);
+      receiveChain.chainKey = chainKey.next();
+      receiveChain.commitMessageMeys(messageKeys);
 
       return plain;
     }
@@ -222,47 +227,47 @@ export class SessionState {
     return encoder.get_buffer();
   }
 
-  static deserialise(buf: ArrayBuffer): SessionState {
-    return SessionState.decode(new CBOR.Decoder(buf));
+  static deserialise(buffer: ArrayBuffer): SessionState {
+    return SessionState.decode(new CBOR.Decoder(buffer));
   }
 
   encode(encoder: CBOR.Encoder): CBOR.Encoder {
     encoder.object(4);
     encoder.u8(0);
-    encoder.array(this.recv_chains.length);
-    this.recv_chains.map(rch => rch.encode(encoder));
+    encoder.array(this.recvChains.length);
+    this.recvChains.map(rch => rch.encode(encoder));
     encoder.u8(1);
-    this.send_chain.encode(encoder);
+    this.sendChain.encode(encoder);
     encoder.u8(2);
-    this.root_key.encode(encoder);
+    this.rootKey.encode(encoder);
     encoder.u8(3);
-    return encoder.u32(this.prev_counter);
+    return encoder.u32(this.prevCounter);
   }
 
   static decode(decoder: CBOR.Decoder): SessionState {
-    const self = ClassUtil.new_instance(SessionState);
+    const self = ClassUtil.newInstance(SessionState);
 
     const nprops = decoder.object();
     for (let index = 0; index <= nprops - 1; index++) {
       switch (decoder.u8()) {
         case 0: {
-          self.recv_chains = [];
-          let len = decoder.array();
-          while (len--) {
-            self.recv_chains.push(RecvChain.decode(decoder));
+          self.recvChains = [];
+          let length = decoder.array();
+          while (length--) {
+            self.recvChains.push(RecvChain.decode(decoder));
           }
           break;
         }
         case 1: {
-          self.send_chain = SendChain.decode(decoder);
+          self.sendChain = SendChain.decode(decoder);
           break;
         }
         case 2: {
-          self.root_key = RootKey.decode(decoder);
+          self.rootKey = RootKey.decode(decoder);
           break;
         }
         case 3: {
-          self.prev_counter = decoder.u32();
+          self.prevCounter = decoder.u32();
           break;
         }
         default: {

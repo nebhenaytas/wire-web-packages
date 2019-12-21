@@ -39,14 +39,14 @@ describe('CryptographyService', () => {
   beforeEach(async () => {
     cryptography = new CryptographyService(undefined, await createEngine('wire'), undefined);
     const preKeys = await cryptography.cryptobox.create();
-    aliceLastResortPreKey = preKeys.filter(preKey => preKey.key_id === Proteus.keys.PreKey.MAX_PREKEY_ID)[0];
+    aliceLastResortPreKey = preKeys.filter(preKey => preKey.keyId === Proteus.keys.PreKey.MAX_PREKEY_ID)[0];
     bob = new Cryptobox(await createEngine('wire'));
     return bob.create();
   });
 
   describe('"constructor"', () => {
     it('creates an instance.', () => {
-      expect(cryptography.cryptobox.identity.public_key.fingerprint()).toBeDefined();
+      expect(cryptography.cryptobox.identity.publicKey.fingerprint()).toBeDefined();
       expect(cryptography).toBeDefined();
     });
   });
@@ -63,7 +63,7 @@ describe('CryptographyService', () => {
 
   describe('"decrypt"', () => {
     it('decrypts a Base64-encoded cipher message.', async () => {
-      const alicePublicKey = cryptography.cryptobox.identity.public_key;
+      const alicePublicKey = cryptography.cryptobox.identity.publicKey;
       const publicPreKeyBundle = Proteus.keys.PreKeyBundle.new(alicePublicKey, aliceLastResortPreKey);
       const text = 'Hello Alice!';
       const encryptedPreKeyMessage = await bob.encrypt(

@@ -37,8 +37,8 @@ export class Message {
     return encoder.get_buffer();
   }
 
-  static deserialise(buf: ArrayBuffer): CipherMessage | PreKeyMessage {
-    const decoder = new CBOR.Decoder(buf);
+  static deserialise(buffer: ArrayBuffer): CipherMessage | PreKeyMessage {
+    const decoder = new CBOR.Decoder(buffer);
 
     switch (decoder.u8()) {
       case 1:

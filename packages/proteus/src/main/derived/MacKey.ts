@@ -41,8 +41,7 @@ export class MacKey {
    * @param msg Unsigned message
    */
   verify(signature: Uint8Array, msg: Uint8Array): boolean {
-    const verify = sodium.crypto_auth_hmacsha256_verify(signature, msg, this.key);
-    return verify;
+    return sodium.crypto_auth_hmacsha256_verify(signature, msg, this.key);
   }
 
   encode(encoder: CBOR.Encoder): CBOR.Encoder {
@@ -52,19 +51,19 @@ export class MacKey {
   }
 
   static decode(decoder: CBOR.Decoder): MacKey {
-    let key_bytes = new Uint8Array([]);
+    let keyBytes = new Uint8Array([]);
 
     const nprops = decoder.object();
     for (let index = 0; index <= nprops - 1; index++) {
       switch (decoder.u8()) {
         case 0:
-          key_bytes = new Uint8Array(decoder.bytes());
+          keyBytes = new Uint8Array(decoder.bytes());
           break;
         default:
           decoder.skip();
       }
     }
 
-    return new MacKey(key_bytes);
+    return new MacKey(keyBytes);
   }
 }

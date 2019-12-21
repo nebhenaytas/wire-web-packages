@@ -21,7 +21,7 @@ export interface ParameterlessConstructor<T> {
   new (): T;
 }
 
-export function new_instance<T>(proposedClass: ParameterlessConstructor<T>): T {
+export function newInstance<T>(proposedClass: ParameterlessConstructor<T>): T {
   try {
     const newClass = new proposedClass();
     return newClass;

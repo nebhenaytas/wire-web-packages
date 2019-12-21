@@ -25,35 +25,34 @@ import {CipherKey} from './CipherKey';
 import {MacKey} from './MacKey';
 
 export class DerivedSecrets {
-  cipher_key: CipherKey;
-  mac_key: MacKey;
+  cipherKey: CipherKey;
+  macKey: MacKey;
 
   constructor() {
-    this.cipher_key = new CipherKey();
-    this.mac_key = new MacKey(new Uint8Array([]));
+    this.cipherKey = new CipherKey();
+    this.macKey = new MacKey(new Uint8Array([]));
   }
 
   static kdf(input: Uint8Array | ArrayBuffer[], salt: Uint8Array, info: string): DerivedSecrets {
-    const byte_length = 64;
+    const byteLength = 64;
+    const outputKeyMaterial = KeyDerivationUtil.hkdf(salt, input, info, byteLength);
 
-    const output_key_material = KeyDerivationUtil.hkdf(salt, input, info, byte_length);
+    const cipherKey = new Uint8Array(outputKeyMaterial.buffer.slice(0, 32));
+    const macKey = new Uint8Array(outputKeyMaterial.buffer.slice(32, 64));
 
-    const cipher_key = new Uint8Array(output_key_material.buffer.slice(0, 32));
-    const mac_key = new Uint8Array(output_key_material.buffer.slice(32, 64));
+    MemoryUtil.zeroize(outputKeyMaterial.buffer);
 
-    MemoryUtil.zeroize(output_key_material.buffer);
-
-    const ds = ClassUtil.new_instance(DerivedSecrets);
-    ds.cipher_key = CipherKey.new(cipher_key);
-    ds.mac_key = new MacKey(mac_key);
-    return ds;
+    const derivedSecretsInstance = ClassUtil.newInstance(DerivedSecrets);
+    derivedSecretsInstance.cipherKey = CipherKey.new(cipherKey);
+    derivedSecretsInstance.macKey = new MacKey(macKey);
+    return derivedSecretsInstance;
   }
 
   /**
    * @param input Initial key material (usually the Master Key) in byte array format
    * @param info Key Derivation Data
    */
-  static kdf_without_salt(input: Uint8Array | ArrayBuffer[], info: string): DerivedSecrets {
+  static kdfWithoutSalt(input: Uint8Array | ArrayBuffer[], info: string): DerivedSecrets {
     return this.kdf(input, new Uint8Array(0), info);
   }
 }

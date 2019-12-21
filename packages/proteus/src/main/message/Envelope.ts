@@ -24,35 +24,35 @@ import * as ClassUtil from '../util/ClassUtil';
 import {Message} from './Message';
 
 export class Envelope {
-  _message_enc: Uint8Array;
+  private messageEnc: Uint8Array;
   mac: Uint8Array;
   message: Message;
   version: number;
 
   constructor() {
-    this._message_enc = new Uint8Array([]);
+    this.messageEnc = new Uint8Array([]);
     this.mac = new Uint8Array([]);
     this.message = new Message();
     this.version = -1;
   }
 
-  static new(mac_key: MacKey, message: Message): Envelope {
-    const serialized_message = new Uint8Array(message.serialise());
+  static new(macKey: MacKey, message: Message): Envelope {
+    const serializedMessage = new Uint8Array(message.serialise());
 
-    const env = ClassUtil.new_instance(Envelope);
+    const envelopeInstance = ClassUtil.newInstance(Envelope);
 
-    env.version = 1;
-    env.mac = mac_key.sign(serialized_message);
-    env.message = message;
-    env._message_enc = serialized_message;
+    envelopeInstance.version = 1;
+    envelopeInstance.mac = macKey.sign(serializedMessage);
+    envelopeInstance.message = message;
+    envelopeInstance.messageEnc = serializedMessage;
 
-    Object.freeze(env);
-    return env;
+    Object.freeze(envelopeInstance);
+    return envelopeInstance;
   }
 
-  /** @param mac_key The remote party's MacKey */
-  verify(mac_key: MacKey): boolean {
-    return mac_key.verify(this.mac, this._message_enc);
+  /** @param macKey The remote party's MacKey */
+  verify(macKey: MacKey): boolean {
+    return macKey.verify(this.mac, this.messageEnc);
   }
 
   /** @returns The serialized message envelope */
@@ -62,8 +62,8 @@ export class Envelope {
     return encoder.get_buffer();
   }
 
-  static deserialise(buf: ArrayBuffer): Envelope {
-    const decoder = new CBOR.Decoder(buf);
+  static deserialise(buffer: ArrayBuffer): Envelope {
+    const decoder = new CBOR.Decoder(buffer);
     return Envelope.decode(decoder);
   }
 
@@ -78,26 +78,26 @@ export class Envelope {
     encoder.bytes(this.mac);
 
     encoder.u8(2);
-    return encoder.bytes(this._message_enc);
+    return encoder.bytes(this.messageEnc);
   }
 
   static decode(decoder: CBOR.Decoder): Envelope {
-    const env = ClassUtil.new_instance(Envelope);
+    const envelopeInstance = ClassUtil.newInstance(Envelope);
     const nprops = decoder.object();
 
     for (let index = 0; index <= nprops - 1; index++) {
       switch (decoder.u8()) {
         case 0: {
-          env.version = decoder.u8();
+          envelopeInstance.version = decoder.u8();
           break;
         }
         case 1: {
-          const nprops_mac = decoder.object();
+          const npropsMac = decoder.object();
 
-          for (let subindex = 0; subindex <= nprops_mac - 1; subindex++) {
+          for (let subindex = 0; subindex <= npropsMac - 1; subindex++) {
             switch (decoder.u8()) {
               case 0:
-                env.mac = new Uint8Array(decoder.bytes());
+                envelopeInstance.mac = new Uint8Array(decoder.bytes());
                 break;
               default:
                 decoder.skip();
@@ -107,7 +107,7 @@ export class Envelope {
           break;
         }
         case 2: {
-          env._message_enc = new Uint8Array(decoder.bytes());
+          envelopeInstance.messageEnc = new Uint8Array(decoder.bytes());
           break;
         }
         default: {
@@ -116,9 +116,9 @@ export class Envelope {
       }
     }
 
-    env.message = Message.deserialise(env._message_enc.buffer);
+    envelopeInstance.message = Message.deserialise(envelopeInstance.messageEnc.buffer);
 
-    Object.freeze(env);
-    return env;
+    Object.freeze(envelopeInstance);
+    return envelopeInstance;
   }
 }

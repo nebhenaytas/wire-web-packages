@@ -12,7 +12,7 @@ const getTimeInSeconds = timer => {
 };
 
 function createSessionId(receiver) {
-  return `session-with-${receiver.identity.public_key.fingerprint()}`;
+  return `session-with-${receiver.identity.publicKey.fingerprint()}`;
 }
 
 function numbersInArray(count) {
@@ -37,8 +37,8 @@ async function initialSetup() {
   await bob.create();
 
   const bobBundle = Proteus.keys.PreKeyBundle.new(
-    bob.identity.public_key,
-    await bob.store.load_prekey(Proteus.keys.PreKey.MAX_PREKEY_ID),
+    bob.identity.publicKey,
+    await bob.store.loadPreykey(Proteus.keys.PreKey.MAX_PREKEY_ID),
   );
 
   const cipherMessage = await alice.encrypt(createSessionId(bob), 'Hello', bobBundle.serialise());
@@ -111,8 +111,8 @@ async function pingPongWithMultipleSessions(messageCount) {
   await alice.create();
 
   const aliceBundle = Proteus.keys.PreKeyBundle.new(
-    alice.identity.public_key,
-    await alice.store.load_prekey(Proteus.keys.PreKey.MAX_PREKEY_ID),
+    alice.identity.publicKey,
+    await alice.store.loadPreykey(Proteus.keys.PreKey.MAX_PREKEY_ID),
   );
 
   process.stdout.write(`Measuring time for creating "${messageCount}" cryptoboxes ... `);
